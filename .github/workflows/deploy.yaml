@@ -1,0 +1,53 @@
+name: Continuous Deployment to Cloud Server
+
+on:
+  workflow_run:
+    workflows: [ "CI/CD Pipeline - Plant Disease Classifier" ]
+    types: [ completed ]
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Cloud VM (AWS EC2 / DigitalOcean / VPS)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Deploy via SSH to Cloud Host
+        if: ${{ env.HOST != '' && env.SSH_KEY != '' }}
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USERNAME: ${{ secrets.SERVER_USER }}
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            echo "==== Starting Deployment on Cloud Server ===="
+            # Log in to Docker registry
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            
+            # Pull latest image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/plant-disease-classifier:latest
+            
+            # Stop & remove old container if running
+            docker stop plant_disease_app || true
+            docker rm plant_disease_app || true
+            
+            # Run updated container
+            docker run -d \
+              --name plant_disease_app \
+              --restart unless-stopped \
+              -p 80:8000 \
+              -e TF_ENABLE_ONEDNN_OPTS=0 \
+              ${{ secrets.DOCKER_USERNAME }}/plant-disease-classifier:latest
+            
+            # Verify container health
+            sleep 15
+            docker ps -f name=plant_disease_app
+            echo "==== Deployment Completed Successfully ===="

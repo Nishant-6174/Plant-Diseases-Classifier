@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  plant-disease-classifier:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: plant-disease-classifier:latest
+    container_name: plant_disease_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - TF_ENABLE_ONEDNN_OPTS=0
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
