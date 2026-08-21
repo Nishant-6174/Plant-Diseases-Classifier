@@ -1,6 +1,6 @@
 # 🌿 AgriVision AI — Production-Grade Plant Disease Classifier & Pathology Suite
 
-[![CI/CD Pipeline](https://github.com/your-org/plant-disease-classifier/actions/workflows/ci_cd.yaml/badge.svg)](https://github.com/your-org/plant-disease-classifier/actions)
+[![CI/CD Pipeline](https://github.com/Nishant-6174/plant-disease-classifier/actions/workflows/ci_cd.yaml/badge.svg)](https://github.com/Nishant-6174/plant-disease-classifier/actions)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-FF6F00.svg?logo=tensorflow&logoColor=white)](https://tensorflow.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
