@@ -1,32 +1,29 @@
 """
 image_validator.py
 ------------------
-A conservative heuristic filter for the Plant Disease Classifier API.
 
-PURPOSE:
-    Reject images that are obviously inconsistent with plant-leaf inputs
-    (e.g., solid blue/gray/black frames, completely white images).
+Conservative leaf-image validation for the Plant Disease Classifier.
 
-    This is NOT a reliable leaf-vs-non-leaf classifier. It cannot reliably
-    distinguish between a car photo and a heavily diseased leaf using colour
-    and texture statistics alone.  Its sole goal is:
+This module is a validation gate, NOT a disease classifier.
 
-        "Reject images that are clearly NOT plant leaves while minimising
-         false rejection of legitimate (healthy or diseased) leaf images."
+The EfficientNet model will always produce one of its known classes when
+given an arbitrary image. This validator therefore attempts to reject
+images that are clearly outside the expected plant-image domain.
 
-    When in doubt, the validator PASSES the image to EfficientNet.
+Important design principle:
 
-APPROACH (three independent checks, all must fail to trigger rejection):
-    1. Organic-colour ratio  – the fraction of pixels whose HSV hue falls in
-       the range associated with plants (greens, yellows, browns, rust reds).
-    2. Laplacian variance    – a zero-variance image is a pixel-perfect solid
-       block with no texture whatsoever.
-    3. Canny edge density    – a featureless image has essentially no edges.
+    Plant-like colour is strong evidence that an image should be allowed
+    through the validator.
 
-    Rejection only occurs when the image clearly and unambiguously fails
-    an extreme threshold (e.g. 0 % organic pixels AND 0 edge pixels).
-    Any image that is even slightly ambiguous is passed through.
+    Texture/edges are supporting evidence only.
+
+This is especially important because a perfectly uniform synthetic green
+or yellow image is intentionally used by the project's tests and must
+not be rejected merely because it has zero texture.
 """
+
+from __future__ import annotations
+
 import cv2
 import numpy as np
 from PIL import Image
@@ -35,92 +32,314 @@ from src.logger import logger
 
 
 # ---------------------------------------------------------------------------
-# Thresholds – deliberately extreme / permissive
+# Thresholds
 # ---------------------------------------------------------------------------
 
-# Minimum fraction of pixels with "plant-like" colour.
-# Set to 0 so a completely monochromatic non-plant image (pure blue, pure
-# gray) is caught ONLY when combined with zero texture + zero edges.
-_MIN_PLANT_RATIO: float = 0.0
+# Minimum plant-like colour required to pass the colour-content rule.
+_MIN_PLANT_RATIO = 0.08
 
-# A Laplacian variance of < 1.0 indicates a perfectly uniform block of
-# colour (every pixel identical). Real photographs never reach this.
-_MAX_FEATURELESS_VARIANCE: float = 1.0
+# Minimum vegetation (green) ratio.
+_MIN_VEGETATION_RATIO = 0.04
 
-# Canny edge density threshold: < this means essentially no edges at all.
-_MAX_FEATURELESS_EDGE_DENSITY: float = 0.0005
+# Extremely high percentage of low-saturation pixels combined with very
+# low mean saturation is characteristic of grayscale/neutral images.
+_MAX_LOW_SATURATION_RATIO = 0.92
+
+# Featureless threshold.
+#
+# IMPORTANT:
+# We do NOT reject a featureless image merely because variance and edges
+# are low. A solid green/yellow test image is intentionally valid.
+_MAX_FEATURELESS_VARIANCE = 2.0
+_MAX_FEATURELESS_EDGE_DENSITY = 0.0008
+
+# Percentage of pixels that must be plant-like before colour alone is
+# considered strong enough to pass.
+_STRONG_PLANT_RATIO = 0.25
+
+
+def _calculate_features(image: Image.Image) -> dict:
+    """
+    Calculate visual features used by the validation gate.
+    """
+
+    rgb = np.array(image.convert("RGB"), dtype=np.uint8)
+
+    if rgb.size == 0:
+        raise ValueError("Empty image.")
+
+    height, width = rgb.shape[:2]
+    total_pixels = height * width
+
+    if total_pixels == 0:
+        raise ValueError("Image contains no pixels.")
+
+    # ------------------------------------------------------------------
+    # OpenCV representations
+    # ------------------------------------------------------------------
+
+    bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+
+    h = hsv[:, :, 0]
+    s = hsv[:, :, 1]
+    v = hsv[:, :, 2]
+
+    # ------------------------------------------------------------------
+    # Plant-like colour masks
+    # ------------------------------------------------------------------
+    #
+    # OpenCV hue range = 0..179.
+    #
+    # Green:
+    # approximately 50..190 degrees in conventional HSV.
+    #
+    # Yellow/brown:
+    # common colours of healthy, aging and diseased leaves.
+    #
+    # Red/rust:
+    # common in several plant disease classes.
+    # ------------------------------------------------------------------
+
+    green_mask = cv2.inRange(
+        hsv,
+        np.array([25, 25, 20], dtype=np.uint8),
+        np.array([95, 255, 255], dtype=np.uint8),
+    )
+
+    yellow_brown_mask = cv2.inRange(
+        hsv,
+        np.array([8, 30, 20], dtype=np.uint8),
+        np.array([35, 255, 255], dtype=np.uint8),
+    )
+
+    red_mask_1 = cv2.inRange(
+        hsv,
+        np.array([0, 35, 20], dtype=np.uint8),
+        np.array([10, 255, 255], dtype=np.uint8),
+    )
+
+    red_mask_2 = cv2.inRange(
+        hsv,
+        np.array([165, 35, 20], dtype=np.uint8),
+        np.array([179, 255, 255], dtype=np.uint8),
+    )
+
+    plant_mask = cv2.bitwise_or(
+        green_mask,
+        cv2.bitwise_or(
+            yellow_brown_mask,
+            cv2.bitwise_or(red_mask_1, red_mask_2),
+        ),
+    )
+
+    vegetation_mask = green_mask
+
+    plant_pixels = cv2.countNonZero(plant_mask)
+    vegetation_pixels = cv2.countNonZero(vegetation_mask)
+
+    plant_ratio = plant_pixels / total_pixels
+    vegetation_ratio = vegetation_pixels / total_pixels
+
+    # ------------------------------------------------------------------
+    # Saturation / brightness statistics
+    # ------------------------------------------------------------------
+
+    low_saturation_mask = (s < 25).astype(np.uint8) * 255
+
+    low_saturation_ratio = (
+        cv2.countNonZero(low_saturation_mask) / total_pixels
+    )
+
+    mean_saturation = float(np.mean(s))
+    mean_value = float(np.mean(v))
+
+    # ------------------------------------------------------------------
+    # Texture and edges
+    # ------------------------------------------------------------------
+
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+
+    variance = float(
+        cv2.Laplacian(gray, cv2.CV_64F).var()
+    )
+
+    edges = cv2.Canny(
+        gray,
+        threshold1=50,
+        threshold2=150,
+    )
+
+    edge_density = (
+        cv2.countNonZero(edges) / total_pixels
+    )
+
+    return {
+        "plant_ratio": float(plant_ratio),
+        "vegetation_ratio": float(vegetation_ratio),
+        "low_saturation_ratio": float(low_saturation_ratio),
+        "mean_saturation": mean_saturation,
+        "mean_value": mean_value,
+        "variance": variance,
+        "edge_density": float(edge_density),
+    }
 
 
 def validate_image(image: Image.Image) -> tuple[bool, str]:
     """
-    Determine whether an image is plausibly a plant-leaf photograph.
-
-    Parameters
-    ----------
-    image : PIL.Image.Image
-        The image to validate (any mode; converted to RGB internally).
+    Determine whether an image is sufficiently plausible as a plant image.
 
     Returns
     -------
-    (is_valid, reason) : (bool, str)
-        is_valid – True  → pass the image to the disease classifier.
-                   False → reject; do not run disease prediction.
-        reason   – human-readable explanation (logged and returned in the
-                   API response when the image is rejected).
+    (is_valid, reason)
+
+    True:
+        Image is allowed to reach the disease classifier.
+
+    False:
+        Image is rejected before inference.
     """
+
     try:
-        # ── Convert to numpy RGB array ──────────────────────────────────────
-        rgb = np.array(image.convert("RGB"), dtype=np.uint8)
-        if rgb.size == 0:
-            return False, "Empty image."
+        features = _calculate_features(image)
 
-        bgr = rgb[:, :, ::-1]  # OpenCV expects BGR
-
-        total_pixels: int = rgb.shape[0] * rgb.shape[1]
-
-        # ── 1. Texture (Laplacian variance) ─────────────────────────────────
-        gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-        variance: float = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-
-        # ── 2. Edge density (Canny) ─────────────────────────────────────────
-        edges = cv2.Canny(gray, threshold1=50, threshold2=150)
-        edge_density: float = float(cv2.countNonZero(edges)) / total_pixels
-
-        # ── 3. Organic-colour ratio (HSV) ───────────────────────────────────
-        hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
-
-        # Greens / yellows / browns: hue 10–100 °
-        mask_gb = cv2.inRange(hsv, np.array([10, 15, 15]), np.array([100, 255, 255]))
-        # Rust / brick reds (hue wraps): 0–10 °  and  165–180 °
-        mask_r1 = cv2.inRange(hsv, np.array([0, 15, 15]), np.array([10, 255, 255]))
-        mask_r2 = cv2.inRange(hsv, np.array([165, 15, 15]), np.array([180, 255, 255]))
-        plant_mask = cv2.bitwise_or(mask_gb, cv2.bitwise_or(mask_r1, mask_r2))
-        plant_ratio: float = float(cv2.countNonZero(plant_mask)) / total_pixels
+        plant_ratio = features["plant_ratio"]
+        vegetation_ratio = features["vegetation_ratio"]
+        low_saturation_ratio = features["low_saturation_ratio"]
+        mean_saturation = features["mean_saturation"]
+        variance = features["variance"]
+        edge_density = features["edge_density"]
 
         logger.info(
-            "Image validation — plant_ratio=%.4f  variance=%.2f  edge_density=%.5f",
-            plant_ratio, variance, edge_density,
+            (
+                "Image validation — "
+                "plant_ratio=%.4f vegetation_ratio=%.4f "
+                "low_sat=%.4f mean_sat=%.2f "
+                "variance=%.2f edge_density=%.5f"
+            ),
+            plant_ratio,
+            vegetation_ratio,
+            low_saturation_ratio,
+            mean_saturation,
+            variance,
+            edge_density,
         )
 
-        # ── Rejection rule ───────────────────────────────────────────────────
-        # Only reject when ALL THREE signals indicate an obviously featureless,
-        # non-organic image.  This keeps the filter extremely conservative.
+        # --------------------------------------------------------------
+        # Rule 1: strongly plant-like colour
+        #
+        # This rule comes FIRST intentionally.
+        #
+        # A solid green or yellow/brown test image has:
+        #
+        #     variance = 0
+        #     edge_density = 0
+        #
+        # but it still contains 100% plant-like colour.
+        #
+        # Therefore strong plant colour should allow the image through.
+        # --------------------------------------------------------------
+
         if (
-            plant_ratio <= _MIN_PLANT_RATIO
+            plant_ratio >= _STRONG_PLANT_RATIO
+            or vegetation_ratio >= _STRONG_PLANT_RATIO
+        ):
+            return True, "OK"
+
+        # --------------------------------------------------------------
+        # Rule 2: completely featureless NON-plant image
+        #
+        # Only reject featureless images when they ALSO lack meaningful
+        # plant-like colour.
+        # --------------------------------------------------------------
+
+        if (
+            variance < _MAX_FEATURELESS_VARIANCE
+            and edge_density < _MAX_FEATURELESS_EDGE_DENSITY
+            and plant_ratio < _MIN_PLANT_RATIO
+            and vegetation_ratio < _MIN_VEGETATION_RATIO
+        ):
+            reason = (
+                "The uploaded image appears to be blank or featureless. "
+                "Please upload a clear photograph of a plant leaf."
+            )
+
+            logger.warning(
+                "Validation rejected image: %s",
+                reason,
+            )
+
+            return False, reason
+
+        # --------------------------------------------------------------
+        # Rule 3: almost entirely neutral / grayscale image
+        #
+        # This catches many blank screenshots, diagrams and grayscale
+        # images while allowing normal colour photographs.
+        # --------------------------------------------------------------
+
+        if (
+            low_saturation_ratio >= _MAX_LOW_SATURATION_RATIO
+            and mean_saturation < 20
+        ):
+            reason = (
+                "The uploaded image does not appear to contain "
+                "sufficient plant-like visual information. "
+                "Please upload a clear photograph of a plant leaf."
+            )
+
+            logger.warning(
+                "Validation rejected image: %s",
+                reason,
+            )
+
+            return False, reason
+
+        # --------------------------------------------------------------
+        # Rule 4: insufficient plant-like colour AND weak visual
+        # structure.
+        #
+        # We do not require plant colour alone for every legitimate
+        # photograph because lighting/background conditions can alter
+        # colour statistics.
+        #
+        # However, an image with almost no plant colour and almost no
+        # visual structure is very likely outside the intended domain.
+        # --------------------------------------------------------------
+
+        if (
+            plant_ratio < _MIN_PLANT_RATIO
+            and vegetation_ratio < _MIN_VEGETATION_RATIO
             and variance < _MAX_FEATURELESS_VARIANCE
             and edge_density < _MAX_FEATURELESS_EDGE_DENSITY
         ):
             reason = (
-                "Image does not appear to contain plant-like colours or texture. "
-                "Please upload a clear photograph of a plant leaf."
+                "The uploaded image does not appear to contain a "
+                "plant leaf. Please upload a clear photograph of "
+                "a plant leaf."
             )
-            logger.warning("Validation rejected image: %s", reason)
+
+            logger.warning(
+                "Validation rejected image: %s",
+                reason,
+            )
+
             return False, reason
+
+        # --------------------------------------------------------------
+        # Otherwise, be conservative and allow the classifier to decide.
+        # --------------------------------------------------------------
 
         return True, "OK"
 
     except Exception as exc:
-        # If something goes wrong in the validator itself, be conservative:
-        # pass the image through rather than blocking a legitimate upload.
-        logger.error("Image validation error (passing image through): %s", exc)
+        # Never allow a validator implementation error to crash the API.
+        #
+        # If validation itself fails, pass the image through so that a
+        # legitimate image is not accidentally blocked.
+        logger.error(
+            "Image validation error (passing image through): %s",
+            exc,
+        )
+
         return True, "OK"
