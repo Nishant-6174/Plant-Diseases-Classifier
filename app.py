@@ -1,3 +1,4 @@
+import io
 import os
 import sys
 import time
@@ -9,13 +10,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from PIL import Image
 from pydantic import BaseModel, Field
 
 from src.constants import CLASS_NAMES_PATH, DISEASE_INFO_PATH
 from src.exception import PlantDiseaseException
 from src.logger import logger
 from src.pipeline.predict_pipeline import PredictionPipeline
-from src.utils.common import parse_class_metadata, read_json
+from src.utils.common import decode_base64_image, parse_class_metadata, read_json
+from src.utils.gradcam import (
+    generate_gradcam_heatmap,
+    heatmap_to_base64,
+    overlay_heatmap_on_image,
+    pil_to_base64,
+)
 
 # Global pipeline instance
 _pipeline: Optional[PredictionPipeline] = None
@@ -97,9 +105,9 @@ async def index_view(request: Request):
     """
     classes_list = read_json(CLASS_NAMES_PATH)
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "total_classes": len(classes_list),
             "version": "1.0.0"
         }
@@ -170,14 +178,183 @@ async def predict_base64_endpoint(payload: Base64PredictionRequest):
     """
     try:
         pipe = get_pipeline()
-        result = pipe.predict_base64(payload.image, top_k=payload.top_k or 5)
-        return JSONResponse(content=result, status_code=200)
+        
+        # ── Decode Base64 manually to retain the original PIL image for Grad-CAM ──
+        original_pil = decode_base64_image(payload.image)
+        
+        # ── Standard prediction (must not fail due to Grad-CAM) ──────────
+        prediction_result = pipe.predict_image(original_pil, top_k=payload.top_k or 5)
+
+        # ── Grad-CAM computation ─────────────────────────────────────────
+        gradcam_payload = {
+            "success": False,
+            "target_layer": "top_activation",
+            "target_class": None,
+            "original_image": None,
+            "heatmap": None,
+            "overlay": None,
+            "error": None
+        }
+
+        try:
+            # Preprocess exactly as the predictor does
+            predictor = pipe.predictor
+            img_tensor = predictor.preprocess_image(original_pil)   # shape (1, 224, 224, 3)
+
+            # Determine predicted class index from prediction result
+            pred_class_name = prediction_result["prediction"]["class_name"]
+            predicted_class_idx = predictor.classes.index(pred_class_name)
+
+            # Generate Grad-CAM heatmap
+            heatmap, used_class_idx = generate_gradcam_heatmap(
+                model=predictor.model,
+                img_tensor=img_tensor,
+                class_idx=predicted_class_idx
+            )
+
+            # Encode original image as base64
+            original_b64 = pil_to_base64(original_pil)
+
+            # Encode coloured heatmap as base64
+            heatmap_b64 = heatmap_to_base64(
+                heatmap=heatmap,
+                target_size=original_pil.size   # (width, height)
+            )
+
+            # Encode blended overlay as base64
+            overlay_b64 = overlay_heatmap_on_image(
+                original_pil=original_pil,
+                heatmap=heatmap,
+                alpha=0.45
+            )
+
+            gradcam_payload.update({
+                "success": True,
+                "target_class": used_class_idx,
+                "original_image": original_b64,
+                "heatmap": heatmap_b64,
+                "overlay": overlay_b64,
+            })
+            logger.info(f"Grad-CAM generated successfully for class_idx={used_class_idx}")
+
+        except Exception as gcam_err:
+            # Grad-CAM failure must NOT kill the prediction response
+            logger.error(f"Grad-CAM generation failed (prediction still returned): {gcam_err}")
+            gradcam_payload["error"] = str(gcam_err)
+
+        prediction_result["gradcam"] = gradcam_payload
+        return JSONResponse(content=prediction_result, status_code=200)
+
     except PlantDiseaseException as pde:
         logger.error(f"Base64 prediction exception: {pde}")
         raise HTTPException(status_code=400, detail=str(pde))
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/predict-with-gradcam", tags=["Inference"])
+async def predict_with_gradcam(
+    file: UploadFile = File(..., description="Plant leaf image (JPEG, PNG, WEBP)"),
+    top_k: int = 5
+):
+    """
+    Classify a plant leaf image AND generate Grad-CAM explainability maps.
+
+    Returns the standard prediction result PLUS:
+    - gradcam.original_image  — base64 encoded original image
+    - gradcam.heatmap         — base64 Jet-coloured Grad-CAM heatmap
+    - gradcam.overlay         — base64 Grad-CAM heatmap blended onto original
+    - gradcam.target_layer    — name of the convolutional layer used
+    - gradcam.target_class    — predicted class index used for gradients
+    - gradcam.success         — whether Grad-CAM succeeded
+    - gradcam.error           — error message if Grad-CAM failed (prediction still returned)
+    """
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/jpg", "application/octet-stream"]
+    if file.content_type and file.content_type.lower() not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type: {file.content_type}. Please upload JPEG, PNG, or WEBP."
+        )
+
+    try:
+        contents = await file.read()
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        # ── Standard prediction (must not fail due to Grad-CAM) ──────────
+        pipe = get_pipeline()
+        prediction_result = pipe.predict_image(contents, top_k=top_k)
+
+        # ── Grad-CAM computation ─────────────────────────────────────────
+        gradcam_payload = {
+            "success": False,
+            "target_layer": "top_activation",
+            "target_class": None,
+            "original_image": None,
+            "heatmap": None,
+            "overlay": None,
+            "error": None
+        }
+
+        try:
+            # Reconstruct PIL image from raw bytes (original dimensions)
+            original_pil = Image.open(io.BytesIO(contents)).convert("RGB")
+
+            # Preprocess exactly as the predictor does
+            predictor = pipe.predictor
+            img_tensor = predictor.preprocess_image(contents)   # shape (1, 224, 224, 3)
+
+            # Determine predicted class index from prediction result
+            pred_class_name = prediction_result["prediction"]["class_name"]
+            predicted_class_idx = predictor.classes.index(pred_class_name)
+
+            # Generate Grad-CAM heatmap
+            heatmap, used_class_idx = generate_gradcam_heatmap(
+                model=predictor.model,
+                img_tensor=img_tensor,
+                class_idx=predicted_class_idx
+            )
+
+            # Encode original image as base64
+            original_b64 = pil_to_base64(original_pil)
+
+            # Encode coloured heatmap as base64
+            heatmap_b64 = heatmap_to_base64(
+                heatmap=heatmap,
+                target_size=original_pil.size   # (width, height)
+            )
+
+            # Encode blended overlay as base64
+            overlay_b64 = overlay_heatmap_on_image(
+                original_pil=original_pil,
+                heatmap=heatmap,
+                alpha=0.45
+            )
+
+            gradcam_payload.update({
+                "success": True,
+                "target_class": used_class_idx,
+                "original_image": original_b64,
+                "heatmap": heatmap_b64,
+                "overlay": overlay_b64,
+            })
+            logger.info(f"Grad-CAM generated successfully for class_idx={used_class_idx}")
+
+        except Exception as gcam_err:
+            # Grad-CAM failure must NOT kill the prediction response
+            logger.error(f"Grad-CAM generation failed (prediction still returned): {gcam_err}")
+            gradcam_payload["error"] = str(gcam_err)
+
+        prediction_result["gradcam"] = gradcam_payload
+        return JSONResponse(content=prediction_result, status_code=200)
+
+    except PlantDiseaseException as pde:
+        logger.error(f"Grad-CAM endpoint exception: {pde}")
+        raise HTTPException(status_code=500, detail=str(pde))
+    except Exception as e:
+        logger.error(f"Unexpected error in /predict-with-gradcam: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
 @app.post("/batch-predict", tags=["Inference"])

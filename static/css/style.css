@@ -1337,3 +1337,281 @@ body {
         text-align: center;
     }
 }
+
+
+/* ==========================================================================
+   Grad-CAM Explainability Section
+   ========================================================================== */
+
+.gradcam-card {
+    border: 1px solid rgba(99, 179, 237, 0.2);
+    background: linear-gradient(135deg,
+        rgba(17, 25, 39, 0.9) 0%,
+        rgba(15, 23, 42, 0.95) 100%);
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.gradcam-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        #3b82f6 0%,
+        #06b6d4 40%,
+        #10b981 70%,
+        #f59e0b 100%);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.gradcam-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.gradcam-title-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.gradcam-icon {
+    font-size: 1.5rem;
+    color: #60a5fa;
+    margin-top: 2px;
+    filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.5));
+}
+
+.gradcam-card h4 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem;
+}
+
+.gradcam-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.gradcam-subtitle code {
+    background: rgba(96, 165, 250, 0.12);
+    color: #60a5fa;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.73rem;
+}
+
+.gradcam-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(96, 165, 250, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.gradcam-status-badge.success {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--emerald-400);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.gradcam-status-badge.error {
+    background: rgba(244, 63, 94, 0.12);
+    color: #f87171;
+    border-color: rgba(244, 63, 94, 0.25);
+}
+
+/* ── Error notice ─────────────────────────────────────────────────────────── */
+
+.gradcam-error-notice {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(244, 63, 94, 0.08);
+    border: 1px solid rgba(244, 63, 94, 0.2);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 1rem;
+    color: #fca5a5;
+    font-size: 0.82rem;
+    margin-bottom: 1rem;
+}
+
+/* ── Three-image grid ─────────────────────────────────────────────────────── */
+
+.gradcam-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.gradcam-img-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: transform var(--transition-fast),
+                border-color var(--transition-fast),
+                box-shadow var(--transition-fast);
+}
+
+.gradcam-img-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(96, 165, 250, 0.3);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+}
+
+.gradcam-img-label {
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.gradcam-img-label.heatmap-label {
+    color: #fb923c;
+}
+
+.gradcam-img-label.overlay-label {
+    color: var(--emerald-400);
+}
+
+.gradcam-img-wrap {
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gradcam-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--transition-smooth);
+}
+
+.gradcam-img-card:hover .gradcam-img {
+    transform: scale(1.03);
+}
+
+/* ── Jet colormap legend ──────────────────────────────────────────────────── */
+
+.gradcam-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 1rem;
+    font-size: 0.75rem;
+}
+
+.legend-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.legend-gradient {
+    flex: 1;
+    min-width: 80px;
+    max-width: 180px;
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(90deg,
+        #00008b 0%,
+        #0000ff 12%,
+        #00ffff 25%,
+        #00ff00 37%,
+        #ffff00 50%,
+        #ffa500 62%,
+        #ff0000 75%,
+        #8b0000 100%);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.legend-low {
+    color: #60a5fa;
+    font-weight: 600;
+    font-size: 0.7rem;
+}
+
+.legend-high {
+    color: #f87171;
+    font-weight: 600;
+    font-size: 0.7rem;
+}
+
+.legend-hint {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex: 1;
+    min-width: 200px;
+}
+
+.legend-hint i {
+    color: #60a5fa;
+    flex-shrink: 0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+    .gradcam-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .gradcam-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .gradcam-grid {
+        gap: 0.75rem;
+    }
+    .legend-hint {
+        display: none;
+    }
+}
+
+/* Encyclopedia Layout Update */
+.encyclopedia-layout { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 1.5rem !important; height: 60vh; overflow: hidden !important; padding: 1.5rem; }
+.encyclopedia-sidebar { overflow-y: auto; padding-right: 0.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.encyclopedia-detail { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 1.5rem; overflow-y: auto; }
+.enc-detail-title { font-size: 1.3rem; color: #fff; margin-bottom: 1rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.5rem; }
+.enc-section { margin-bottom: 1.2rem; }
+.enc-section h5 { color: var(--emerald-400); margin-bottom: 0.4rem; font-size: 0.95rem; }
+.enc-section p { font-size: 0.85rem; color: var(--text-secondary); }
+@media (max-width: 768px) { .encyclopedia-layout { grid-template-columns: 1fr !important; overflow-y: auto !important; height: 75vh; } .encyclopedia-sidebar { overflow-y: visible; } }

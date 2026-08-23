@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgriVision AI - End-to-End Plant Disease Classifier & Pathology Suite</title>
-    <meta name="description" content="Production-grade AI plant disease classifier powered by EfficientNetB0. Detect 86 crop conditions instantly with organic remedies, chemical treatments, and prevention protocols.">
+    <title>AgriVision AI - Plant Disease Classification</title>
+    <meta name="description" content="Deep Learning Plant Disease Classification Project powered by EfficientNetB0. Detect 86 crop conditions with recommended management information.">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,7 +31,7 @@
                 </div>
                 <div class="logo-text">
                     <span class="brand-title">AgriVision <span class="accent-text">AI</span></span>
-                    <span class="brand-subtitle">Plant Pathology & Disease Classifier</span>
+                    <span class="brand-subtitle">Plant Disease Classification Project</span>
                 </div>
             </div>
 
@@ -57,9 +57,9 @@
             <div class="hero-badge">
                 <i class="fa-solid fa-microchip"></i> Powered by Fine-Tuned EfficientNetB0
             </div>
-            <h1 class="hero-title">Industrial Plant Disease Diagnosis & Treatment Intelligence</h1>
+            <h1 class="hero-title">Plant Disease Classification</h1>
             <p class="hero-desc">
-                Upload a plant leaf image or use real-time camera capture to detect symptoms, receive instant AI pathology classification across <strong>86 crop conditions</strong>, and access targeted organic and chemical recovery protocols.
+                Upload a plant leaf image or use real-time camera capture to detect symptoms, receive instant AI disease prediction across <strong>86 crop conditions</strong>, and access treatment information and recommended management.
             </p>
 
             <div class="stats-ribbon">
@@ -78,17 +78,10 @@
                     </div>
                 </div>
                 <div class="stat-card">
-                    <i class="fa-solid fa-bolt-lightning stat-icon"></i>
-                    <div class="stat-data">
-                        <span class="stat-num">&lt; 85ms</span>
-                        <span class="stat-label">Inference Latency</span>
-                    </div>
-                </div>
-                <div class="stat-card">
                     <i class="fa-solid fa-bullseye stat-icon"></i>
                     <div class="stat-data">
                         <span class="stat-num">98.4%</span>
-                        <span class="stat-label">Validation Accuracy</span>
+                        <span class="stat-label">Model Validation Accuracy</span>
                     </div>
                 </div>
             </div>
@@ -187,7 +180,7 @@
             <!-- Right Panel: Diagnosis & Treatment Results -->
             <div class="panel results-panel" id="results-panel">
                 <div class="panel-header">
-                    <h2><i class="fa-solid fa-stethoscope"></i> Pathology Report & Prescription</h2>
+                    <h2><i class="fa-solid fa-stethoscope"></i> Disease Information & Recommended Management</h2>
                     <span class="report-badge" id="report-timestamp">Ready</span>
                 </div>
 
@@ -197,7 +190,7 @@
                         <i class="fa-solid fa-spa"></i>
                     </div>
                     <h3>No Diagnosis Generated Yet</h3>
-                    <p>Select or upload a leaf photo from the left panel and click <strong>Run AI Diagnosis</strong> to generate an instant pathology report with confidence metrics and treatment recommendations.</p>
+                    <p>Select or upload a leaf photo from the left panel and click <strong>Run AI Diagnosis</strong> to generate a prediction with confidence metrics and treatment information.</p>
                 </div>
 
                 <!-- Active Results Content -->
@@ -245,14 +238,14 @@
                         </div>
                     </div>
 
-                    <!-- Treatment & Prescription Accordion -->
+                    <!-- Treatment & Management Accordion -->
                     <div class="card treatment-card">
-                        <h4><i class="fa-solid fa-hand-holding-medical"></i> Clinical Action & Agronomic Prescription</h4>
+                        <h4><i class="fa-solid fa-hand-holding-medical"></i> Treatment Information & Recommended Management</h4>
                         
                         <div class="treatment-section">
                             <div class="treatment-heading symptoms-head">
                                 <i class="fa-solid fa-notes-medical"></i>
-                                <span>Clinical Symptoms & Visual Indicators</span>
+                                <span>Visual Symptoms</span>
                             </div>
                             <p class="treatment-body" id="res-symptoms">Symptom details...</p>
                         </div>
@@ -260,7 +253,7 @@
                         <div class="treatment-section">
                             <div class="treatment-heading organic-head">
                                 <i class="fa-solid fa-seedling"></i>
-                                <span>Organic & Biological Solutions</span>
+                                <span>General Management Information</span>
                             </div>
                             <p class="treatment-body" id="res-organic">Organic remedies...</p>
                         </div>
@@ -268,7 +261,7 @@
                         <div class="treatment-section">
                             <div class="treatment-heading chemical-head">
                                 <i class="fa-solid fa-flask-vial"></i>
-                                <span>Chemical Treatment & Fungicide Dosage</span>
+                                <span>Treatment Information</span>
                             </div>
                             <p class="treatment-body" id="res-chemical">Chemical treatments...</p>
                         </div>
@@ -276,9 +269,72 @@
                         <div class="treatment-section">
                             <div class="treatment-heading prevention-head">
                                 <i class="fa-solid fa-shield-halved"></i>
-                                <span>Agronomic Prevention Protocol</span>
+                                <span>Prevention & Management</span>
                             </div>
                             <p class="treatment-body" id="res-prevention">Prevention tips...</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════════════════════════════════════════════ -->
+                    <!-- Grad-CAM Explainability Section                     -->
+                    <!-- ═══════════════════════════════════════════════════ -->
+                    <div class="card gradcam-card" id="gradcam-section" style="display:none;">
+                        <div class="gradcam-header">
+                            <div class="gradcam-title-group">
+                                <i class="fa-solid fa-eye gradcam-icon"></i>
+                                <div>
+                                    <h4>Explainable AI — Grad-CAM Visualization</h4>
+                                    <p class="gradcam-subtitle">Gradient-weighted Class Activation Map · Layer: <code id="gradcam-layer-name">top_activation</code></p>
+                                </div>
+                            </div>
+                            <span class="gradcam-status-badge" id="gradcam-status-badge">
+                                <i class="fa-solid fa-brain"></i> Generating...
+                            </span>
+                        </div>
+
+                        <!-- Grad-CAM error notice (shown only on failure) -->
+                        <div class="gradcam-error-notice hidden" id="gradcam-error-notice">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span id="gradcam-error-text">Grad-CAM unavailable.</span>
+                        </div>
+
+                        <!-- Three image grid -->
+                        <div class="gradcam-grid" id="gradcam-grid">
+                            <div class="gradcam-img-card">
+                                <div class="gradcam-img-label">
+                                    <i class="fa-solid fa-image"></i> Original Image
+                                </div>
+                                <div class="gradcam-img-wrap">
+                                    <img id="gradcam-original" src="" alt="Original plant leaf image" class="gradcam-img">
+                                </div>
+                            </div>
+                            <div class="gradcam-img-card">
+                                <div class="gradcam-img-label heatmap-label">
+                                    <i class="fa-solid fa-fire-flame-curved"></i> Grad-CAM Heatmap
+                                </div>
+                                <div class="gradcam-img-wrap">
+                                    <img id="gradcam-heatmap" src="" alt="Grad-CAM heatmap visualization" class="gradcam-img">
+                                </div>
+                            </div>
+                            <div class="gradcam-img-card">
+                                <div class="gradcam-img-label overlay-label">
+                                    <i class="fa-solid fa-layer-group"></i> Grad-CAM Overlay
+                                </div>
+                                <div class="gradcam-img-wrap">
+                                    <img id="gradcam-overlay" src="" alt="Grad-CAM overlay on original image" class="gradcam-img">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="gradcam-legend">
+                            <span class="legend-label">Activation Intensity:</span>
+                            <div class="legend-gradient"></div>
+                            <span class="legend-low">Low</span>
+                            <span class="legend-high">High</span>
+                            <span class="legend-hint">
+                                <i class="fa-solid fa-circle-info"></i>
+                                Red/yellow regions indicate where the model focused its attention for this prediction.
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -293,7 +349,7 @@
                 <div class="modal-title-group">
                     <i class="fa-solid fa-book-medical modal-icon"></i>
                     <div>
-                        <h3>Plant Pathology Encyclopedia (86 Categories)</h3>
+                        <h3>Plant Disease Encyclopedia (86 Categories)</h3>
                         <p>Search, filter, and inspect symptoms and treatment for all supported crops</p>
                     </div>
                 </div>
@@ -314,8 +370,33 @@
                 </div>
             </div>
 
-            <div class="modal-body" id="encyclopedia-list">
-                <!-- Populated via API -->
+            <div class="modal-body encyclopedia-layout">
+                <div class="encyclopedia-sidebar" id="encyclopedia-list">
+                    <!-- Populated via API -->
+                </div>
+                <div class="encyclopedia-detail" id="encyclopedia-detail" style="display: none;">
+                    <h4 id="enc-detail-title" class="enc-detail-title">Select a condition</h4>
+                    
+                    <div class="enc-section">
+                        <h5><i class="fa-solid fa-eye"></i> Visual Symptoms</h5>
+                        <p id="enc-detail-symptoms">Select a disease on the left to view details.</p>
+                    </div>
+
+                    <div class="enc-section">
+                        <h5><i class="fa-solid fa-leaf"></i> General Management Information</h5>
+                        <p id="enc-detail-organic"></p>
+                    </div>
+
+                    <div class="enc-section">
+                        <h5><i class="fa-solid fa-flask-vial"></i> Treatment Information</h5>
+                        <p id="enc-detail-chemical"></p>
+                    </div>
+
+                    <div class="enc-section">
+                        <h5><i class="fa-solid fa-shield-halved"></i> Prevention & Management</h5>
+                        <p id="enc-detail-prevention"></p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -327,7 +408,7 @@
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-left">
-                <p><strong>AgriVision AI</strong> &bull; Production Deep Learning Plant Disease Classification System</p>
+                <p><strong>AgriVision AI</strong> &bull; Deep Learning Plant Disease Classification Project</p>
                 <p class="footer-sub">Trained on Master Plant Village Dataset with Transfer Learning & Fine-Tuned EfficientNetB0</p>
             </div>
             <div class="footer-right">

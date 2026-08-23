@@ -49,6 +49,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const resPrevention = document.getElementById('res-prevention');
     const reportTimestamp = document.getElementById('report-timestamp');
 
+    // Grad-CAM UI elements
+    const gradcamSection    = document.getElementById('gradcam-section');
+    const gradcamStatusBadge= document.getElementById('gradcam-status-badge');
+    const gradcamErrorNotice= document.getElementById('gradcam-error-notice');
+    const gradcamErrorText  = document.getElementById('gradcam-error-text');
+    const gradcamOriginal   = document.getElementById('gradcam-original');
+    const gradcamHeatmap    = document.getElementById('gradcam-heatmap');
+    const gradcamOverlay    = document.getElementById('gradcam-overlay');
+    const gradcamLayerName  = document.getElementById('gradcam-layer-name');
+    const gradcamGrid       = document.getElementById('gradcam-grid');
+
     // Encyclopedia Modal
     const btnEncyclopedia = document.getElementById('btn-encyclopedia');
     const encyclopediaModal = document.getElementById('encyclopedia-modal');
@@ -294,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('file', selectedFile);
                 formData.append('top_k', '5');
 
-                const response = await fetch('/predict', {
+                const response = await fetch('/predict-with-gradcam', {
                     method: 'POST',
                     body: formData
                 });
@@ -394,7 +405,57 @@ document.addEventListener('DOMContentLoaded', () => {
         resPrevention.textContent = pred.prevention || "Maintain standard clean cultivation practices.";
 
         reportTimestamp.textContent = new Date().toLocaleTimeString();
+
+        // Render Grad-CAM section if data is present
+        if (data.gradcam) {
+            renderGradcam(data.gradcam);
+        } else {
+            // Hide gradcam section if gradcam data is missing
+            gradcamSection.style.display = 'none';
+        }
+
         resultsContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // =========================================================================
+    // Grad-CAM Renderer
+    // =========================================================================
+
+    function renderGradcam(gcam) {
+        // Always show the section once a prediction comes in
+        gradcamSection.style.display = 'block';
+
+        // Reset state
+        gradcamErrorNotice.classList.add('hidden');
+        gradcamGrid.style.display = 'grid';
+
+        if (gcam.target_layer) {
+            gradcamLayerName.textContent = gcam.target_layer;
+        }
+
+        if (gcam.success) {
+            // ── Success ──
+            gradcamStatusBadge.className = 'gradcam-status-badge success';
+            gradcamStatusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Grad-CAM Ready';
+
+            gradcamOriginal.src = gcam.original_image || '';
+            gradcamHeatmap.src  = gcam.heatmap        || '';
+            gradcamOverlay.src  = gcam.overlay         || '';
+
+        } else {
+            // ── Failure (prediction still shown; gradcam section shows error) ──
+            gradcamStatusBadge.className = 'gradcam-status-badge error';
+            gradcamStatusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Grad-CAM Error';
+
+            gradcamErrorNotice.classList.remove('hidden');
+            gradcamErrorText.textContent = gcam.error || 'Grad-CAM could not be generated.';
+
+            // Clear images
+            gradcamOriginal.src = '';
+            gradcamHeatmap.src  = '';
+            gradcamOverlay.src  = '';
+            gradcamGrid.style.display = 'none';
+        }
     }
 
     // =========================================================================
@@ -450,6 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filtered.forEach(item => {
             const card = document.createElement('div');
             card.className = 'encyclopedia-card';
+            card.style.cursor = 'pointer';
             card.innerHTML = `
                 <div class="enc-top">
                     <div>
@@ -462,6 +524,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="enc-desc">Trained neural class identifier: <code>${item.raw_class}</code></div>
             `;
+            
+            card.addEventListener('click', async () => {
+                // Highlight active card
+                document.querySelectorAll('.encyclopedia-card').forEach(c => c.style.borderColor = 'var(--card-border)');
+                card.style.borderColor = 'var(--emerald-400)';
+                
+                const detailContainer = document.getElementById('encyclopedia-detail');
+                const title = document.getElementById('enc-detail-title');
+                const symptoms = document.getElementById('enc-detail-symptoms');
+                const organic = document.getElementById('enc-detail-organic');
+                const chemical = document.getElementById('enc-detail-chemical');
+                const prevention = document.getElementById('enc-detail-prevention');
+                
+                detailContainer.style.display = 'block';
+                title.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading details...';
+                symptoms.textContent = '';
+                organic.textContent = '';
+                chemical.textContent = '';
+                prevention.textContent = '';
+                
+                try {
+                    const res = await fetch(`/api/class-info/${item.raw_class}`);
+                    if (!res.ok) throw new Error('Failed to fetch class info');
+                    const info = await res.json();
+                    
+                    title.textContent = item.display_name;
+                    symptoms.textContent = info.symptoms || 'Information not available.';
+                    organic.textContent = info.organic_treatment || 'Information not available.';
+                    chemical.textContent = info.chemical_treatment || 'Information not available.';
+                    prevention.textContent = info.prevention || 'Information not available.';
+                } catch (e) {
+                    console.error("Error fetching class info:", e);
+                    title.textContent = item.display_name;
+                    symptoms.textContent = "Error loading details. Please try again.";
+                }
+            });
+
             encyclopediaList.appendChild(card);
         });
     }

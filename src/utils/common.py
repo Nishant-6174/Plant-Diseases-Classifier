@@ -81,6 +81,8 @@ def parse_class_metadata(class_name: str) -> Dict[str, Any]:
     
     if raw.startswith("healthy_"):
         plant = raw.replace("healthy_", "").replace("_", " ").title()
+        if plant == "Groundnut":
+            plant = "Groundnut (Peanut)"
         condition = "Healthy"
     elif raw.startswith("diseased_"):
         plant = raw.replace("diseased_", "").replace("_", " ").title()
