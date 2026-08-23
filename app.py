@@ -18,6 +18,7 @@ from src.exception import PlantDiseaseException
 from src.logger import logger
 from src.pipeline.predict_pipeline import PredictionPipeline
 from src.utils.common import decode_base64_image, parse_class_metadata, read_json
+from src.utils.image_validator import validate_image
 from src.utils.gradcam import (
     generate_gradcam_heatmap,
     heatmap_to_base64,
@@ -159,6 +160,19 @@ async def predict_file(
         if len(contents) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
+        # ── Input validation (conservative heuristic) ─────────────────────
+        pil_image = Image.open(io.BytesIO(contents)).convert("RGB")
+        is_valid, reason = validate_image(pil_image)
+        if not is_valid:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error_type": "invalid_image",
+                    "message": "Invalid image. Please upload a clear image of a plant leaf.",
+                },
+            )
+
         pipe = get_pipeline()
         result = pipe.predict_image(contents, top_k=top_k)
         return JSONResponse(content=result, status_code=200)
@@ -178,10 +192,22 @@ async def predict_base64_endpoint(payload: Base64PredictionRequest):
     """
     try:
         pipe = get_pipeline()
-        
+
         # ── Decode Base64 manually to retain the original PIL image for Grad-CAM ──
         original_pil = decode_base64_image(payload.image)
-        
+
+        # ── Input validation (conservative heuristic) ─────────────────────
+        is_valid, reason = validate_image(original_pil)
+        if not is_valid:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error_type": "invalid_image",
+                    "message": "Invalid image. Please upload a clear image of a plant leaf.",
+                },
+            )
+
         # ── Standard prediction (must not fail due to Grad-CAM) ──────────
         prediction_result = pipe.predict_image(original_pil, top_k=payload.top_k or 5)
 
@@ -281,6 +307,19 @@ async def predict_with_gradcam(
         contents = await file.read()
         if len(contents) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        # ── Input validation (conservative heuristic) ─────────────────────
+        pil_image = Image.open(io.BytesIO(contents)).convert("RGB")
+        is_valid, reason = validate_image(pil_image)
+        if not is_valid:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error_type": "invalid_image",
+                    "message": "Invalid image. Please upload a clear image of a plant leaf.",
+                },
+            )
 
         # ── Standard prediction (must not fail due to Grad-CAM) ──────────
         pipe = get_pipeline()
