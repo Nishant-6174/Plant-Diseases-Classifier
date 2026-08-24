@@ -23,7 +23,6 @@ from src.utils.common import (
     read_json,
 )
 from src.utils.image_validator import validate_image
-from src.utils.clip_plant_gate import validate_plant_image
 from src.utils.gradcam import (
     generate_gradcam_heatmap,
     heatmap_to_base64,
@@ -167,10 +166,18 @@ def validate_uploaded_plant_image(
     pil_image: Image.Image,
 ):
     """
-    Run both validation stages:
+    Run image validation.
 
-    1. CLIP plant/non-plant gate.
-    2. Existing image validator.
+    CLIP plant/non-plant validation is optional and controlled
+    by the ENABLE_CLIP_GATE environment variable.
+
+    Local development:
+        ENABLE_CLIP_GATE=true
+
+    Render deployment:
+        ENABLE_CLIP_GATE=false
+
+    The existing image validator always runs.
 
     Returns:
         (True, None) if valid.
@@ -180,52 +187,77 @@ def validate_uploaded_plant_image(
     """
 
     # ------------------------------------------------------------------------
-    # STEP 1: CLIP PLANT GATE
+    # STEP 1: OPTIONAL CLIP PLANT GATE
     # ------------------------------------------------------------------------
 
-    try:
-        is_plant, plant_confidence = validate_plant_image(
-            pil_image
-        )
+    enable_clip_gate = os.getenv(
+        "ENABLE_CLIP_GATE",
+        "false",
+    ).lower() == "true"
 
-    except Exception as exc:
-        logger.error(
-            f"CLIP plant validation failed: {exc}"
-        )
+    if enable_clip_gate:
 
-        return False, JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error_type": "plant_validation_error",
-                "message": (
-                    "Unable to validate whether the image "
-                    "contains a plant."
-                ),
-            },
-        )
+        try:
+            # Lazy import:
+            # torch and transformers are loaded only when
+            # CLIP validation is actually enabled.
+            from src.utils.clip_plant_gate import (
+                validate_plant_image
+            )
 
-    if not is_plant:
-        logger.warning(
-            "Non-plant image rejected by CLIP gate. "
-            f"Confidence={plant_confidence:.4f}"
-        )
+            is_plant, plant_confidence = (
+                validate_plant_image(
+                    pil_image
+                )
+            )
 
-        return False, JSONResponse(
-            status_code=400,
-            content={
-                "success": False,
-                "error_type":"invalid_image",
-                "message": (
-                    "This image does not appear to contain "
-                    "a plant. Please upload a clear plant "
-                    "leaf image."
-                ),
-                "plant_confidence": round(
-                    plant_confidence,
-                    4,
-                ),
-            },
+        except Exception as exc:
+
+            logger.error(
+                f"CLIP plant validation failed: {exc}"
+            )
+
+            return False, JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error_type": "plant_validation_error",
+                    "message": (
+                        "Unable to validate whether the "
+                        "image contains a plant."
+                    ),
+                },
+            )
+
+        if not is_plant:
+
+            logger.warning(
+                "Non-plant image rejected by CLIP gate. "
+                f"Confidence={plant_confidence:.4f}"
+            )
+
+            return False, JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error_type": "invalid_image",
+                    "message": (
+                        "This image does not appear to contain "
+                        "a plant. Please upload a clear plant "
+                        "leaf image."
+                    ),
+                    "plant_confidence": round(
+                        plant_confidence,
+                        4,
+                    ),
+                },
+            )
+
+    else:
+
+        logger.info(
+            "CLIP plant gate disabled. "
+            "Using existing image validator."
         )
 
     # ------------------------------------------------------------------------
@@ -237,6 +269,7 @@ def validate_uploaded_plant_image(
     )
 
     if not is_valid:
+
         logger.warning(
             f"Image rejected by image validator: {reason}"
         )
@@ -350,7 +383,8 @@ async def predict_file(
     """
     Classify a plant leaf image.
 
-    CLIP plant gate runs BEFORE the disease classifier.
+    CLIP plant gate runs when ENABLE_CLIP_GATE=true.
+    Existing image validation always runs.
     """
 
     # ------------------------------------------------------------------------
@@ -479,7 +513,7 @@ async def predict_base64_endpoint(
     """
     Classify a Base64 encoded image.
 
-    CLIP plant gate runs before prediction.
+    CLIP plant gate runs when ENABLE_CLIP_GATE=true.
     Grad-CAM is generated after successful prediction.
     """
 
@@ -662,7 +696,8 @@ async def predict_with_gradcam(
     """
     Classify a plant leaf and generate Grad-CAM.
 
-    CLIP plant gate runs before the disease classifier.
+    CLIP plant gate runs when ENABLE_CLIP_GATE=true.
+    Existing image validation always runs.
     """
 
     if (
@@ -871,7 +906,7 @@ async def batch_predict_endpoint(
     """
     Run batch prediction.
 
-    Every image is checked by the CLIP plant gate
+    Every image is checked by the optional CLIP plant gate
     before being passed to the disease classifier.
     """
 
@@ -931,7 +966,7 @@ async def batch_predict_endpoint(
                 )
 
             # ---------------------------------------------------------------
-            # CLIP + EXISTING VALIDATION
+            # OPTIONAL CLIP + EXISTING VALIDATION
             # ---------------------------------------------------------------
 
             is_valid, error_response = (
@@ -941,16 +976,6 @@ async def batch_predict_endpoint(
             )
 
             if not is_valid:
-
-                error_content = (
-                    error_response.body
-                    if hasattr(
-                        error_response,
-                        "body",
-                    )
-                    else None
-                )
-
                 return error_response
 
             image_bytes_list.append(
@@ -1059,14 +1084,21 @@ if __name__ == "__main__":
 
     import uvicorn
 
+    port = int(
+        os.getenv(
+            "PORT",
+            "8000",
+        )
+    )
+
     logger.info(
-        "Launching server on "
-        "http://0.0.0.0:8000"
+        f"Launching server on "
+        f"http://0.0.0.0:{port}"
     )
 
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=False,
     )
