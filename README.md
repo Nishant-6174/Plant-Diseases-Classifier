@@ -1,130 +1,286 @@
 # 🌿 AgriVision AI — Plant Disease Classifier
 
-[![CI/CD Pipeline](https://github.com/Nishant-6174/plant-disease-classifier/actions/workflows/ci_cd.yaml/badge.svg)](https://github.com/Nishant-6174/plant-disease-classifier/actions)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg?logo=fastapi\&logoColor=white)](https://fastapi.tiangolo.com/)
-[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-FF6F00.svg?logo=tensorflow\&logoColor=white)](https://www.tensorflow.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker\&logoColor=white)](https://www.docker.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Production%20API-009688?logo=fastapi\&logoColor=white)](https://fastapi.tiangolo.com/)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-FF6F00?logo=tensorflow\&logoColor=white)](https://www.tensorflow.org/)
+[![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python\&logoColor=white)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker\&logoColor=white)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **AgriVision AI** is an end-to-end deep learning application for plant leaf disease classification using **EfficientNetB0**, exposed through a **FastAPI REST API** with **Grad-CAM explainability**, structured metadata, image validation, automated testing, and Docker support.
+> **AgriVision AI** is an end-to-end deep learning application for plant disease classification using a fine-tuned **EfficientNetB0** model, exposed through a **FastAPI backend** and an interactive web interface with **image upload, live camera capture, sample images, Top-K predictions, disease information, treatment guidance, and Grad-CAM explainability**.
 
 ---
 
 ## 📌 Overview
 
-Plant disease diagnosis from leaf images is a practical computer-vision problem where a trained deep learning model can assist in identifying disease categories from visual symptoms.
+Plant disease identification from leaf images is an important computer-vision problem in modern agriculture.
 
-This project combines:
+AgriVision AI uses transfer learning with EfficientNetB0 to classify plant leaf images across **86 disease and healthy classes** covering **19+ major crop varieties**.
 
-* 🧠 **EfficientNetB0** for image classification
-* 🚀 **FastAPI** for REST API deployment
-* 🔍 **Grad-CAM** for model explainability
-* 🛡️ **Input validation** before model inference
-* 📊 **Top-K predictions** for probability comparison
-* 📚 Disease metadata and treatment information
-* 🧪 Automated testing with **pytest**
+The project combines:
+
+* 🧠 Fine-tuned EfficientNetB0
+* 🚀 FastAPI backend
+* 🖥️ Interactive web interface
+* 📤 Drag-and-drop image upload
+* 📷 Live camera capture
+* 🖼️ Sample leaf demonstrations
+* 📊 Top-K prediction probabilities
+* 🔍 Grad-CAM explainability
+* 📚 86-category disease encyclopedia
+* 💊 Treatment and prevention information
 * 📝 Structured application logging
+* 🛡️ Image validation
 * 🐳 Docker support
-* ⚙️ CI/CD workflow support
+* 🧪 Automated testing infrastructure
+* ⚙️ Deployment-ready project structure
 
-The system is designed as a **portfolio-level end-to-end machine-learning application**, covering model inference, API development, validation, testing, and deployment infrastructure.
+The application is designed as a **portfolio-level end-to-end machine-learning project**, demonstrating the complete path from trained model to usable web application and API.
 
 ---
 
-## ✨ Key Features
+# ✨ Key Features
 
-### 🧠 EfficientNetB0 Disease Classification
+## 🧠 EfficientNetB0 Classification
 
-The application uses a fine-tuned **EfficientNetB0** model to classify plant leaf images into the trained disease categories.
+The core classifier uses a fine-tuned **EfficientNetB0** model.
 
-The prediction pipeline handles:
+The prediction pipeline performs:
 
 1. Image loading
 2. Image preprocessing
-3. Model inference
-4. Class mapping
-5. Confidence calculation
-6. Top-K prediction generation
-7. Disease metadata enrichment
+3. Tensor preparation
+4. EfficientNetB0 inference
+5. Class mapping
+6. Confidence calculation
+7. Top-K prediction generation
+8. Disease metadata enrichment
+
+The application supports **86 trained classes**.
 
 ---
 
-### 🔍 Grad-CAM Explainability
+## 🖥️ Interactive Web Application
 
-The `/predict-with-gradcam` endpoint provides Grad-CAM-based visual explanations.
+The frontend is implemented using:
 
-Grad-CAM helps visualize the regions of an input image that contributed most strongly to the model's prediction.
+* HTML
+* CSS
+* Vanilla JavaScript
+* Jinja2 templates
+* FastAPI
 
-This makes the system more interpretable than a simple classification API.
+The main interface is located at:
+
+```text
+templates/index.html
+```
+
+Frontend assets are separated into:
+
+```text
+static/
+├── css/
+│   └── style.css
+├── js/
+│   └── main.js
+└── samples/
+```
+
+The frontend communicates directly with the FastAPI backend using JavaScript `fetch()` requests.
 
 ---
 
-### 🛡️ Input Image Validation
+## 📤 Image Upload
 
-A conservative validation layer has been added before model inference.
+Users can:
 
-The validator is implemented in:
+* Browse for an image
+* Drag and drop an image
+* Preview the selected image
+* Remove the image
+* Run AI diagnosis
+
+Supported formats:
+
+```text
+JPEG
+JPG
+PNG
+WEBP
+```
+
+---
+
+## 📷 Live Camera Capture
+
+The web interface supports real-time camera capture through the browser.
+
+Workflow:
+
+```text
+Live Camera
+     ↓
+Capture Leaf
+     ↓
+Preview Image
+     ↓
+Run AI Diagnosis
+     ↓
+FastAPI
+     ↓
+EfficientNetB0
+```
+
+Camera images are captured in the browser and sent to the backend using the Base64 prediction workflow.
+
+---
+
+## 🖼️ Sample Leaf Gallery
+
+The application includes demonstration images for quick testing.
+
+Current sample images include:
+
+```text
+tomato_early_blight.jpg
+healthy_apple.jpg
+corn_common_rust.jpg
+lemon_citrus_canker.jpg
+potato_late_blight.jpg
+wheat_yellow_rust.jpg
+```
+
+Sample images are stored under:
+
+```text
+static/samples/
+```
+
+Users can select a sample directly from the interface and run a diagnosis.
+
+---
+
+# 🔍 Grad-CAM Explainability
+
+AgriVision AI includes **Grad-CAM (Gradient-weighted Class Activation Mapping)**.
+
+Instead of returning only:
+
+```text
+Tomato — Early Blight
+Confidence: 98.7%
+```
+
+the application can also generate visual explanations showing the regions of the leaf that contributed most strongly to the prediction.
+
+The web interface displays:
+
+1. Original image
+2. Grad-CAM heatmap
+3. Grad-CAM overlay
+
+Example workflow:
+
+```text
+Input Leaf
+    ↓
+EfficientNetB0
+    ↓
+Prediction
+    ↓
+Grad-CAM
+    ↓
+Heatmap + Overlay
+```
+
+The current Grad-CAM implementation uses the model's configured activation layer, exposed in the interface as the target Grad-CAM layer.
+
+---
+
+# 📚 Disease Encyclopedia
+
+The application contains an interactive encyclopedia covering all **86 supported classes**.
+
+Users can:
+
+* Search by crop
+* Search by disease
+* Filter healthy classes
+* Filter diseased classes
+* Open individual disease information
+* View symptoms
+* View management information
+* View treatment information
+* View prevention information
+
+The encyclopedia is dynamically loaded from the backend rather than being hard-coded into the frontend.
+
+---
+
+# 🛡️ Image Validation
+
+The project includes an image-validation layer before model inference.
+
+The implementation is located at:
 
 ```text
 src/utils/image_validator.py
 ```
 
-It combines three visual signals:
+The validator uses visual heuristics such as:
 
-| Signal                      | Purpose                                                                    |
-| --------------------------- | -------------------------------------------------------------------------- |
-| HSV organic-colour analysis | Detects the presence of plant-like green, yellow, brown and rust/red tones |
-| Laplacian variance          | Measures image texture                                                     |
-| Canny edge density          | Measures structural content and edges                                      |
+* HSV colour analysis
+* Image texture
+* Laplacian variance
+* Canny edge density
 
-The purpose of this layer is to reject **obviously unsuitable or featureless inputs** before they reach the disease classifier.
+Its purpose is to reject **obviously unsuitable or featureless images** before they reach the disease classifier.
 
-For example, completely solid blue, gray, black, or white images can be rejected.
+For example, completely uniform images such as:
+
+```text
+Solid black
+Solid white
+Solid gray
+Solid blue
+```
+
+can be rejected.
 
 ### Important limitation
 
-The validator is a **heuristic**, not a dedicated plant-leaf object detector or segmentation model.
+The validation system is a **heuristic validation layer**.
 
-It is intentionally conservative:
+It is **not**:
 
-> **Reject obviously unsuitable images while minimizing false rejection of legitimate healthy or diseased leaf images.**
+* A plant detector
+* A leaf object detector
+* A semantic segmentation model
+* A guaranteed non-leaf image detector
+* A replacement for a dedicated computer-vision OOD system
 
-A real photograph of a car, person, or phone may still pass the heuristic because such images contain edges, textures, and potentially plant-like colours.
+A photograph of a non-leaf object may still pass validation if it contains sufficient texture, edges, or plant-like colours.
 
-Therefore, the validation layer should **not** be described as a guaranteed detector of every non-leaf object.
+Therefore, the purpose of this component is:
 
----
-
-## 🖥️ Application Capabilities
-
-The application provides a web-based interface supporting:
-
-* Drag-and-drop image upload
-* Sample leaf images
-* Disease prediction
-* Confidence scores
-* Top-K predictions
-* Disease information
-* Treatment/prevention information
-* Grad-CAM visualization
-* API-based inference
+> **Reject obviously unsuitable images while minimizing unnecessary rejection of legitimate plant leaf images.**
 
 ---
 
-## 🏗️ Project Architecture
+# 🏗️ Current Project Architecture
 
 ```text
 Plant-Disease-Classifier/
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci_cd.yaml
-│       └── deploy.yaml
+│       └── ...
 │
 ├── logs/
 │   └── Application log files
 │
 ├── src/
+│   │
 │   ├── components/
 │   │   ├── model_loader.py
 │   │   └── predictor.py
@@ -149,24 +305,24 @@ Plant-Disease-Classifier/
 ├── static/
 │   ├── css/
 │   │   └── style.css
+│   │
 │   ├── js/
 │   │   └── main.js
+│   │
 │   └── samples/
-│       ├── tomato_early_blight.jpg
 │       ├── corn_common_rust.jpg
+│       ├── healthy_apple.jpg
+│       ├── lemon_citrus_canker.jpg
+│       ├── placeholder.png
 │       ├── potato_late_blight.jpg
-│       └── healthy_apple.jpg
+│       ├── tomato_early_blight.jpg
+│       └── wheat_yellow_rust.jpg
 │
 ├── templates/
 │   └── index.html
 │
 ├── tests/
-│   ├── test_api.py
-│   ├── test_exception.py
-│   ├── test_gradcam_quick.py
-│   ├── test_logger.py
-│   ├── test_predictor.py
-│   └── test_validation.py
+│   └── ...
 │
 ├── app.py
 ├── Dockerfile
@@ -179,92 +335,158 @@ Plant-Disease-Classifier/
 
 ---
 
-## 🚀 Quick Start
+# 🔄 Application Architecture
 
-### 1. Clone the Repository
+The complete application flow is:
 
-```bash
-git clone https://github.com/Nishant-6174/plant-disease-classifier.git
-
-cd plant-disease-classifier
-```
-
-### 2. Create a Virtual Environment
-
-#### Windows
-
-```powershell
-python -m venv venv
-venv\Scripts\activate
-```
-
-#### Linux / macOS
-
-```bash
-python -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-
-```bash
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-If the project is configured as an editable Python package:
-
-```bash
-pip install -e .
+```text
+                    ┌──────────────────────┐
+                    │    Web Browser       │
+                    │                      │
+                    │  index.html          │
+                    │  style.css            │
+                    │  main.js              │
+                    └──────────┬───────────┘
+                               │
+                 Upload / Camera / Sample
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │      FastAPI         │
+                    │       app.py         │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   Input Validation   │
+                    │                      │
+                    │ HSV + Texture +      │
+                    │ Edge Analysis        │
+                    └──────────┬───────────┘
+                               │
+                    ┌──────────┴──────────┐
+                    │                     │
+                  Invalid                Valid
+                    │                     │
+                    ▼                     ▼
+                 HTTP 400          Prediction Pipeline
+                                          │
+                                          ▼
+                                  EfficientNetB0
+                                          │
+                                          ▼
+                                  Class Prediction
+                                          │
+                          ┌───────────────┼───────────────┐
+                          │               │               │
+                          ▼               ▼               ▼
+                       Top-K          Metadata        Grad-CAM
+                       Results        Information     Explanation
+                          │               │               │
+                          └───────────────┼───────────────┘
+                                          │
+                                          ▼
+                                  FastAPI JSON Response
+                                          │
+                                          ▼
+                                  Interactive Web UI
 ```
 
 ---
 
-## ▶️ Running the Application
+# 🌐 Frontend Architecture
 
-Start the FastAPI application:
+The current frontend is intentionally separated from the backend.
 
-```bash
-python app.py
-```
-
-Or use Uvicorn directly:
-
-```bash
-uvicorn app:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Open:
+## HTML
 
 ```text
-http://localhost:8000
+templates/index.html
 ```
 
-Interactive Swagger API documentation:
+Responsible for:
+
+* Page structure
+* Upload interface
+* Camera interface
+* Sample gallery
+* Diagnosis cards
+* Grad-CAM section
+* Encyclopedia modal
+* Footer
+
+## CSS
 
 ```text
-http://localhost:8000/docs
+static/css/style.css
 ```
 
-Alternative ReDoc documentation:
+Responsible for:
+
+* Layout
+* Responsive design
+* Cards
+* Buttons
+* Diagnosis results
+* Grad-CAM presentation
+* Modal interface
+* Loading states
+* Toast notifications
+
+## JavaScript
 
 ```text
-http://localhost:8000/redoc
+static/js/main.js
 ```
+
+Responsible for:
+
+* Upload handling
+* Drag-and-drop
+* Camera capture
+* Sample image loading
+* API requests
+* Diagnosis rendering
+* Top-K results
+* Grad-CAM rendering
+* Encyclopedia search
+* Disease information retrieval
+* Toast notifications
+* Loading states
 
 ---
 
 # 🔌 API Endpoints
 
-## 1. Predict Plant Disease
+The application exposes a REST API through FastAPI.
 
-### Endpoint
+## `GET /`
+
+Returns the main AgriVision AI web application.
+
+---
+
+## `GET /health`
+
+Checks application and model status.
+
+Example:
 
 ```text
-POST /predict
+GET /health
 ```
 
-Accepts a multipart image upload.
+The endpoint is useful for:
+
+* Deployment health checks
+* Container health monitoring
+* Application diagnostics
+
+---
+
+## `POST /predict`
+
+Performs plant disease prediction using a multipart image upload.
 
 Example:
 
@@ -274,45 +496,18 @@ curl -X POST "http://localhost:8000/predict?top_k=5" \
      -F "file=@sample_leaf.jpg"
 ```
 
-Successful response:
-
-```json
-{
-  "success": true,
-  "prediction": {
-    "class_name": "tomato_early_blight",
-    "display_name": "Tomato - Early Blight",
-    "confidence": 98.74
-  },
-  "top_k_predictions": [
-    {
-      "rank": 1,
-      "class_name": "tomato_early_blight",
-      "display_name": "Tomato - Early Blight",
-      "confidence": 98.74
-    }
-  ]
-}
-```
-
-The exact response fields depend on the current implementation and disease metadata.
-
 ---
 
-## 2. Base64 Prediction
+## `POST /predict-base64`
 
-### Endpoint
+Performs prediction using a Base64-encoded image.
 
-```text
-POST /predict-base64
-```
+This endpoint is particularly useful for:
 
-Designed for applications such as:
-
-* Webcam interfaces
-* Mobile applications
-* Front-end image capture
-* Base64-based clients
+* Browser camera capture
+* Frontend applications
+* Mobile clients
+* Base64 image workflows
 
 Example request:
 
@@ -325,180 +520,179 @@ Example request:
 
 ---
 
-## 3. Prediction with Grad-CAM
+## `POST /predict-with-gradcam`
 
-### Endpoint
+Performs disease prediction together with Grad-CAM explainability.
 
-```text
-POST /predict-with-gradcam
-```
-
-This endpoint performs prediction and generates a Grad-CAM explanation.
-
-For valid leaf images:
+Workflow:
 
 ```text
-HTTP 200
+Image
+ ↓
+Validation
+ ↓
+Prediction
+ ↓
+Grad-CAM
+ ↓
+JSON response containing prediction + explanation
 ```
 
-For images rejected by the validation layer:
-
-```text
-HTTP 400
-```
-
-The classifier and Grad-CAM generation are skipped when validation rejects the image.
+This endpoint is used by the web application's uploaded-image diagnosis workflow.
 
 ---
 
-## 4. Batch Prediction
+## `POST /batch-predict`
 
-### Endpoint
+Provides batch prediction functionality for multiple images.
 
-```text
-POST /batch-predict
-```
-
-Designed for processing multiple uploaded images.
-
-> The current input-validation layer is integrated into `/predict`, `/predict-base64`, and `/predict-with-gradcam`. Batch validation is outside the current validation scope.
+This endpoint is intended for API-based batch inference.
 
 ---
 
-## 5. Health Check
+## `GET /api/classes`
 
-### Endpoint
+Returns the supported disease/healthy class information used by the encyclopedia.
 
-```text
-GET /health
-```
-
-Example:
-
-```json
-{
-  "status": "healthy",
-  "service": "Plant Disease Classifier API",
-  "model_loaded": true,
-  "total_classes": 86,
-  "framework": "TensorFlow / Keras (EfficientNetB0)"
-}
-```
-
-The exact fields depend on the current application implementation.
+The frontend calls this endpoint dynamically.
 
 ---
 
-# 🛡️ Invalid Image Handling
+## `GET /api/class-info/{class_name}`
 
-If the validation layer identifies an obviously unsuitable image, the API returns:
+Returns detailed information for a particular class.
 
-```text
-HTTP 400
-```
+The response can contain information such as:
 
-Example:
+* Symptoms
+* Organic/general management
+* Chemical treatment
+* Prevention
 
-```json
-{
-  "success": false,
-  "error_type": "invalid_image",
-  "message": "Invalid image. Please upload a clear image of a plant leaf."
-}
-```
-
-This validation occurs **before model inference**.
-
-Therefore, obviously invalid images do not unnecessarily reach the EfficientNetB0 classifier.
+This endpoint powers the interactive disease encyclopedia.
 
 ---
 
-# 🧪 Automated Testing
+# 📖 API Documentation
 
-The project includes automated tests covering:
+FastAPI automatically provides interactive API documentation.
 
-* API health endpoint
-* Disease class endpoint
-* Prediction endpoint
-* Base64 prediction
-* Grad-CAM
-* Exception handling
-* Logging
-* Image preprocessing
-* Prediction output structure
-* Image validation
-* Invalid-image API responses
-* Grad-CAM validation behavior
+### Swagger UI
 
-Run the complete test suite:
+```text
+http://localhost:8000/docs
+```
+
+### ReDoc
+
+```text
+http://localhost:8000/redoc
+```
+
+Swagger can be used to test API endpoints directly without the frontend.
+
+---
+
+# 🚀 Quick Start
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/Nishant-6174/plant-disease-classifier.git
+cd plant-disease-classifier
+```
+
+---
+
+## 2. Create a Virtual Environment
+
+### Windows
+
+```powershell
+python -m venv venv
+venv\Scripts\activate
+```
+
+### Linux / macOS
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+---
+
+## 3. Install Dependencies
+
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+If the project is configured as an installable package:
+
+```bash
+pip install -e .
+```
+
+---
+
+# ▶️ Running the Application
+
+Start the application with:
+
+```bash
+python app.py
+```
+
+Alternatively:
+
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+For local development with automatic reload:
+
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Open the application:
+
+```text
+http://localhost:8000
+```
+
+API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+---
+
+# 🧪 Testing
+
+The project contains automated tests for important backend components.
+
+Run:
 
 ```bash
 pytest -v
 ```
 
-Current verified result:
+The test suite covers areas such as:
 
-```text
-35 passed, 1 warning
-```
+* API behavior
+* Prediction logic
+* Model/pipeline behavior
+* Grad-CAM
+* Image validation
+* Exception handling
+* Logging
+* Response structures
 
-The warning currently comes from a dependency deprecation notice involving the FastAPI/Starlette test client stack and does not represent a failing test.
-
----
-
-## 🧪 Validation Test Coverage
-
-The validation tests in:
-
-```text
-tests/test_validation.py
-```
-
-cover both unit and integration behavior.
-
-### Valid inputs
-
-* Tomato Early Blight
-* Corn Common Rust
-* Potato Late Blight
-* Healthy Apple
-* Synthetic green image
-* Synthetic yellow/brown image
-
-### Invalid inputs
-
-* Solid blue image
-* Solid gray image
-* Solid black image
-* Solid white image
-
-### Endpoint behavior
-
-The tests verify that:
-
-```text
-Valid image
-     ↓
-Validation
-     ↓
-EfficientNetB0
-     ↓
-Prediction
-```
-
-while:
-
-```text
-Obviously invalid image
-     ↓
-Validation
-     ↓
-HTTP 400
-     ↓
-Model inference skipped
-```
-
-For Grad-CAM, the tests additionally verify that a rejected image does not contain a `gradcam` response field.
+Always run the test suite before pushing a new version to GitHub.
 
 ---
 
@@ -512,41 +706,37 @@ EfficientNetB0
 
 through TensorFlow/Keras.
 
-The trained model file is:
+The trained model is:
 
 ```text
 plant_disease_efficientnetb0_final.keras
 ```
 
-The model is loaded through the project's model-loading/prediction pipeline.
+The model is loaded through:
 
-Disease class metadata is maintained separately in:
+```text
+src/components/model_loader.py
+```
+
+Prediction logic is implemented through the project's prediction components and pipeline.
+
+---
+
+# 🗂️ Disease Metadata
+
+Class definitions are stored in:
 
 ```text
 src/data/disease_classes.json
 ```
 
-Additional disease information is stored in:
+Disease information is stored in:
 
 ```text
 src/data/disease_info.json
 ```
 
----
-
-# 🔍 Explainability
-
-The project uses **Grad-CAM (Gradient-weighted Class Activation Mapping)** to provide visual explanations of model predictions.
-
-Instead of only returning:
-
-```text
-Tomato Early Blight — 98.7%
-```
-
-the system can also provide an explanation map showing which image regions contributed most strongly to the prediction.
-
-This is particularly useful when evaluating whether the model is focusing on visually meaningful leaf regions.
+This separation allows the prediction system and encyclopedia to use structured disease metadata without hard-coding the information into the frontend.
 
 ---
 
@@ -558,36 +748,43 @@ Application logging is implemented through:
 src/logger.py
 ```
 
-Logs are stored under:
+Application logs are stored under:
 
 ```text
 logs/
 ```
 
-The project also includes automated logger tests.
+Logging is used for:
+
+* Application startup
+* Model initialization
+* Prediction events
+* Errors
+* Pipeline status
+* Debugging
 
 ---
 
 # 🐳 Docker
 
-The project includes Docker support.
+The repository includes Docker support.
 
-### Build the image
+Build the image:
 
 ```bash
-docker build -t plant-disease-classifier:latest .
+docker build -t plant-disease-classifier .
 ```
 
-### Run the container
+Run the container:
 
 ```bash
 docker run -d \
   -p 8000:8000 \
   --name plant_disease_app \
-  plant-disease-classifier:latest
+  plant-disease-classifier
 ```
 
-The application can then be accessed at:
+Open:
 
 ```text
 http://localhost:8000
@@ -595,158 +792,249 @@ http://localhost:8000
 
 ---
 
-## Docker Compose
+# 🐳 Docker Compose
 
-If `docker-compose.yml` is available:
+If using the included Compose configuration:
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 Run in detached mode:
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 View logs:
 
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 Stop the application:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ---
 
-# ⚙️ CI/CD
+# ⚙️ Deployment Architecture
 
-The repository contains GitHub Actions workflows under:
+The application is structured so that the same FastAPI application can be used for local development, Docker execution, and cloud deployment.
+
+The production architecture is:
+
+```text
+                         Internet
+                            │
+                            ▼
+                    ┌───────────────┐
+                    │ Cloud / Server│
+                    └───────┬───────┘
+                            │
+                            ▼
+                    ┌───────────────┐
+                    │   Uvicorn     │
+                    │   FastAPI     │
+                    └───────┬───────┘
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+              ▼                           ▼
+       Web Application               REST API
+              │                           │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+                    Prediction Pipeline
+                            │
+                            ▼
+                       EfficientNetB0
+```
+
+The application listens on:
+
+```text
+0.0.0.0:8000
+```
+
+which allows it to run inside a container or on a remote server.
+
+---
+
+# 🔄 CI/CD
+
+The project can use GitHub Actions for automated workflows.
+
+Workflow files are located under:
 
 ```text
 .github/workflows/
 ```
 
-These workflows can be used for automated project checks, testing, container builds, and deployment depending on the configured workflow files and repository secrets.
+Typical CI/CD stages include:
 
-Typical deployment secrets may include:
+```text
+Git Push
+   ↓
+GitHub Actions
+   ↓
+Install Dependencies
+   ↓
+Run Tests
+   ↓
+Build Application / Docker Image
+   ↓
+Deployment
+```
 
-| Secret            | Purpose                      |
-| ----------------- | ---------------------------- |
-| `DOCKER_USERNAME` | Docker registry username     |
-| `DOCKER_PASSWORD` | Docker registry access token |
-| `SERVER_HOST`     | Deployment server            |
-| `SERVER_USER`     | SSH deployment user          |
-| `SERVER_SSH_KEY`  | SSH private key              |
-
-> Only configure deployment secrets if the corresponding workflow is actually enabled and intended to be used.
+Deployment-specific secrets should only be configured when required by the selected deployment platform.
 
 ---
 
 # 📁 Important Files
 
-| File                               | Purpose                                     |
-| ---------------------------------- | ------------------------------------------- |
-| `app.py`                           | FastAPI application and API endpoints       |
-| `src/components/model_loader.py`   | Model loading and initialization            |
-| `src/components/predictor.py`      | Prediction and preprocessing logic          |
-| `src/pipeline/predict_pipeline.py` | Prediction pipeline orchestration           |
-| `src/utils/common.py`              | Common utilities                            |
-| `src/utils/image_validator.py`     | Conservative input-image validation         |
-| `src/data/disease_classes.json`    | Disease class definitions                   |
-| `src/data/disease_info.json`       | Disease information and metadata            |
-| `src/logger.py`                    | Application logging                         |
-| `src/exception.py`                 | Custom exception handling                   |
-| `tests/`                           | Automated test suite                        |
-| `walkthrough.md`                   | Input-validation implementation walkthrough |
-| `Dockerfile`                       | Container configuration                     |
-| `docker-compose.yml`               | Docker Compose configuration                |
-| `requirements.txt`                 | Python dependencies                         |
+| File                               | Purpose                             |
+| ---------------------------------- | ----------------------------------- |
+| `app.py`                           | FastAPI application and API routes  |
+| `templates/index.html`             | Main web application interface      |
+| `static/css/style.css`             | Frontend styling                    |
+| `static/js/main.js`                | Frontend application logic          |
+| `static/samples/`                  | Demonstration leaf images           |
+| `src/components/model_loader.py`   | Model loading and initialization    |
+| `src/components/predictor.py`      | Prediction logic                    |
+| `src/pipeline/predict_pipeline.py` | Prediction pipeline                 |
+| `src/utils/common.py`              | Common utility functions            |
+| `src/utils/image_validator.py`     | Input image validation              |
+| `src/data/disease_classes.json`    | Supported class definitions         |
+| `src/data/disease_info.json`       | Disease information                 |
+| `src/logger.py`                    | Application logging                 |
+| `src/exception.py`                 | Custom exception handling           |
+| `tests/`                           | Automated tests                     |
+| `Dockerfile`                       | Docker configuration                |
+| `docker-compose.yml`               | Docker Compose configuration        |
+| `requirements.txt`                 | Python dependencies                 |
+| `setup.py`                         | Python package configuration        |
+| `walkthrough.md`                   | Technical walkthrough/documentation |
 
 ---
 
 # ⚠️ Limitations
 
-This project is a machine-learning classification system and has several important limitations.
+## 1. Dataset Dependence
 
-### 1. Dataset Dependence
+Model performance depends on:
 
-Model performance depends heavily on:
-
-* Training dataset quality
+* Training data quality
 * Class distribution
 * Image quality
-* Lighting conditions
+* Lighting
 * Background variation
 * Camera characteristics
+* Similarity between deployment images and training data
 
-### 2. Image Validation
+---
 
-The current validation layer is a conservative heuristic.
+## 2. Image Validation
 
-It is **not**:
+The current image validator is heuristic-based.
 
-* A dedicated object detector
-* A semantic segmentation model
-* A plant-leaf recognition model
-* A guarantee that every non-leaf image will be rejected
+It is not a dedicated plant or leaf detection model.
 
-Its purpose is primarily to reject clearly unsuitable or featureless inputs.
+Therefore, it cannot guarantee rejection of every non-leaf image.
 
-### 3. Model Predictions
+---
 
-A high confidence score does not necessarily mean that a prediction is correct.
+## 3. Model Confidence
 
-The model may fail when presented with images significantly different from its training distribution.
+A high confidence score does not guarantee a correct prediction.
 
-### 4. Treatment Information
+The model may perform poorly on images that are significantly different from its training distribution.
 
-Treatment and prevention information provided by the application should be considered **informational guidance** and not a replacement for diagnosis or advice from a qualified agricultural professional.
+---
+
+## 4. Field Conditions
+
+Images captured in controlled datasets may differ from real agricultural field conditions.
+
+Real-world performance can be affected by:
+
+* Poor lighting
+* Occlusion
+* Multiple leaves
+* Complex backgrounds
+* Blur
+* Camera quality
+* Disease stages not represented in training data
+
+---
+
+## 5. Treatment Information
+
+Treatment and prevention information provided by the application is intended for **informational purposes**.
+
+It should not replace advice from a qualified agricultural professional.
 
 ---
 
 # 🚧 Future Improvements
 
-Possible future improvements include:
+Potential future improvements include:
 
 * Dedicated plant/leaf object detection
-* Leaf segmentation before classification
+* Leaf segmentation
 * Stronger out-of-distribution detection
 * Confidence calibration
 * Larger and more diverse datasets
-* Field-condition image testing
+* Real-world field-condition testing
 * Mobile deployment
 * Model quantization
 * Edge-device inference
 * Improved Grad-CAM visualization
-* Monitoring model performance after deployment
-* Per-image validation for batch prediction
-* More comprehensive adversarial/non-leaf test cases
+* Model monitoring
+* Batch image validation
+* More comprehensive non-leaf image testing
+* Authentication and rate limiting for public API deployment
+* Production database for disease metadata
+* Cloud-based model serving
 
 ---
 
-# 📖 Validation Walkthrough
+# 📖 Technical Documentation
 
-A detailed explanation of the image-validation implementation is available in:
+Additional implementation documentation can be found in:
 
 ```text
 walkthrough.md
 ```
 
-It documents:
+This documentation provides deeper information about the project's image-validation and inference workflow.
 
-* Why input validation was added
-* The HSV colour heuristic
-* Texture analysis
-* Edge-density analysis
-* Validation behavior
-* API integration
-* Test results
-* Current limitations
+---
+
+# 🔐 Security Considerations for Deployment
+
+Before exposing the application publicly, production configuration should consider:
+
+* CORS restrictions
+* Request-size limits
+* File-type validation
+* Rate limiting
+* Authentication where appropriate
+* HTTPS
+* Secure environment variables
+* Logging and monitoring
+* Resource limits for uploaded images
+
+The current development configuration may intentionally use permissive settings such as:
+
+```python
+allow_origins=["*"]
+```
+
+For a public production deployment, this should be restricted according to the actual frontend/client origin.
 
 ---
 
@@ -768,7 +1056,7 @@ for the complete license text.
 
 **Nishant Kumar**
 
-Plant Disease Classification • Deep Learning • Computer Vision • FastAPI • MLOps
+Plant Disease Classification • Deep Learning • Computer Vision • FastAPI • Explainable AI
 
 GitHub:
 
@@ -776,48 +1064,82 @@ https://github.com/Nishant-6174
 
 ---
 
-## ⭐ Project Status
+# ⭐ Project Status
 
-**Current automated test status:**
+**AgriVision AI is currently a functional end-to-end plant disease classification application.**
 
-```text
-35 passed, 1 warning
-```
-
-The project currently provides a complete inference workflow:
+The current workflow is:
 
 ```text
-                ┌─────────────────────┐
-                │   Image Input       │
-                └──────────┬──────────┘
-                           │
-                           ▼
-                ┌─────────────────────┐
-                │ Image Validation    │
-                │ HSV + Texture +     │
-                │ Edge Density        │
-                └──────────┬──────────┘
-                           │
-                ┌──────────┴──────────┐
-                │                     │
-             Invalid                Valid
-                │                     │
-                ▼                     ▼
-          HTTP 400              EfficientNetB0
-                                      │
-                                      ▼
-                              Disease Prediction
-                                      │
-                           ┌──────────┴──────────┐
-                           │                     │
-                      Top-K Results          Grad-CAM
-                           │                     │
-                           └──────────┬──────────┘
-                                      │
-                                      ▼
-                              API / Web Interface
+┌──────────────────────────┐
+│       User Image         │
+│                          │
+│ Upload / Camera / Sample │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│       FastAPI            │
+│         app.py           │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│    Image Validation      │
+└────────────┬─────────────┘
+             │
+        ┌────┴────┐
+        │         │
+     Invalid     Valid
+        │         │
+        ▼         ▼
+    HTTP 400  Prediction
+                  │
+                  ▼
+           EfficientNetB0
+                  │
+        ┌─────────┼─────────┐
+        │         │         │
+        ▼         ▼         ▼
+      Top-K   Metadata   Grad-CAM
+        │         │         │
+        └─────────┼─────────┘
+                  │
+                  ▼
+           JSON Response
+                  │
+                  ▼
+        Interactive Web UI
 ```
 
 ---
+
+## 🌱 What This Project Demonstrates
+
+AgriVision AI demonstrates an end-to-end machine-learning engineering workflow:
+
+```text
+Deep Learning Model
+        ↓
+Model Loading
+        ↓
+Prediction Pipeline
+        ↓
+Image Validation
+        ↓
+FastAPI REST API
+        ↓
+Interactive Frontend
+        ↓
+Explainable AI
+        ↓
+Automated Testing
+        ↓
+Docker
+        ↓
+CI/CD
+        ↓
+Deployment
+```
 
 **Built as an end-to-end deep learning and deployment project for plant disease classification.**

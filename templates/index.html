@@ -3,423 +3,1403 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>AgriVision AI - Plant Disease Classification</title>
-    <meta name="description" content="Deep Learning Plant Disease Classification Project powered by EfficientNetB0. Detect 86 crop conditions with recommended management information.">
-    
+
+    <meta
+        name="description"
+        content="Deep Learning Plant Disease Classification Project powered by EfficientNetB0. Detect 86 crop conditions with recommended management information."
+    >
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet"
+    >
+
     <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Custom CSS -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    >
+
+    <!-- ================================================================
+         IMPORTANT:
+         Actual files are:
+         static/css/style.css
+         static/js/main.js
+         ================================================================ -->
+
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
+
 <body>
+
     <!-- Background Ambient Glows -->
     <div class="ambient-glow glow-1"></div>
     <div class="ambient-glow glow-2"></div>
 
-    <!-- Header Navigation -->
+
+    <!-- ================================================================
+         HEADER
+         ================================================================ -->
+
     <header class="navbar">
+
         <div class="nav-container">
+
             <div class="logo">
+
                 <div class="logo-icon">
                     <i class="fa-solid fa-leaf"></i>
                 </div>
+
                 <div class="logo-text">
-                    <span class="brand-title">AgriVision <span class="accent-text">AI</span></span>
-                    <span class="brand-subtitle">Plant Disease Classification Project</span>
+
+                    <span class="brand-title">
+                        AgriVision <span class="accent-text">AI</span>
+                    </span>
+
+                    <span class="brand-subtitle">
+                        Plant Disease Classification Project
+                    </span>
+
                 </div>
+
             </div>
+
 
             <div class="nav-actions">
+
                 <div class="status-badge" id="system-status">
+
                     <span class="status-dot"></span>
-                    <span class="status-text">Model Active</span>
+
+                    <span class="status-text">
+                        Model Active
+                    </span>
+
                 </div>
-                <button class="nav-btn" id="btn-encyclopedia" title="Explore 86 Supported Diseases">
-                    <i class="fa-solid fa-book-medical"></i> <span>Encyclopedia</span>
+
+
+                <button
+                    class="nav-btn"
+                    id="btn-encyclopedia"
+                    title="Explore 86 Supported Diseases"
+                >
+
+                    <i class="fa-solid fa-book-medical"></i>
+
+                    <span>
+                        Encyclopedia
+                    </span>
+
                 </button>
-                <a href="/docs" target="_blank" class="nav-btn api-btn" title="View Swagger API Documentation">
-                    <i class="fa-solid fa-code"></i> <span>API Docs</span>
+
+
+                <a
+                    href="/docs"
+                    target="_blank"
+                    class="nav-btn api-btn"
+                    title="View Swagger API Documentation"
+                >
+
+                    <i class="fa-solid fa-code"></i>
+
+                    <span>
+                        API Docs
+                    </span>
+
                 </a>
+
             </div>
+
         </div>
+
     </header>
 
-    <!-- Main Container -->
+
+
+    <!-- ================================================================
+         MAIN APPLICATION
+         ================================================================ -->
+
     <main class="main-container">
-        <!-- Hero Section -->
+
+
+        <!-- ============================================================
+             HERO SECTION
+             ============================================================ -->
+
         <section class="hero-section">
+
             <div class="hero-badge">
-                <i class="fa-solid fa-microchip"></i> Powered by Fine-Tuned EfficientNetB0
+
+                <i class="fa-solid fa-microchip"></i>
+
+                Powered by Fine-Tuned EfficientNetB0
+
             </div>
-            <h1 class="hero-title">Plant Disease Classification</h1>
+
+
+            <h1 class="hero-title">
+                Plant Disease Classification
+            </h1>
+
+
             <p class="hero-desc">
-                Upload a plant leaf image or use real-time camera capture to detect symptoms, receive instant AI disease prediction across <strong>86 crop conditions</strong>, and access treatment information and recommended management.
+
+                Upload a plant leaf image or use real-time camera capture
+                to detect symptoms, receive instant AI disease prediction
+                across <strong>86 crop conditions</strong>, and access
+                treatment information and recommended management.
+
             </p>
 
+
+            <!-- Statistics -->
+
             <div class="stats-ribbon">
+
                 <div class="stat-card">
+
                     <i class="fa-solid fa-seedling stat-icon"></i>
+
                     <div class="stat-data">
-                        <span class="stat-num">86</span>
-                        <span class="stat-label">Disease & Healthy Classes</span>
+
+                        <span class="stat-num">
+                            86
+                        </span>
+
+                        <span class="stat-label">
+                            Disease & Healthy Classes
+                        </span>
+
                     </div>
+
                 </div>
+
+
                 <div class="stat-card">
+
                     <i class="fa-solid fa-wheat-awn stat-icon"></i>
+
                     <div class="stat-data">
-                        <span class="stat-num">19+</span>
-                        <span class="stat-label">Major Crop Varieties</span>
+
+                        <span class="stat-num">
+                            19+
+                        </span>
+
+                        <span class="stat-label">
+                            Major Crop Varieties
+                        </span>
+
                     </div>
+
                 </div>
+
+
                 <div class="stat-card">
+
                     <i class="fa-solid fa-bullseye stat-icon"></i>
+
                     <div class="stat-data">
-                        <span class="stat-num">98.4%</span>
-                        <span class="stat-label">Model Validation Accuracy</span>
+
+                        <span class="stat-num">
+                            98.4%
+                        </span>
+
+                        <span class="stat-label">
+                            Model Validation Accuracy
+                        </span>
+
                     </div>
+
                 </div>
+
             </div>
+
         </section>
 
-        <!-- Diagnostic Workspace Grid -->
+
+
+        <!-- ============================================================
+             WORKSPACE
+             ============================================================ -->
+
         <section class="workspace-grid">
-            <!-- Left Panel: Input & Capture Studio -->
+
+
+            <!-- ========================================================
+                 LEFT PANEL
+                 ======================================================== -->
+
             <div class="panel upload-panel">
+
                 <div class="panel-header">
-                    <h2><i class="fa-solid fa-camera-viewfinder"></i> Leaf Inspection Studio</h2>
-                    <span class="panel-hint">RGB 224×224 Tensor Pipeline</span>
+
+                    <h2>
+
+                        <i class="fa-solid fa-camera-viewfinder"></i>
+
+                        Leaf Inspection Studio
+
+                    </h2>
+
+                    <span class="panel-hint">
+                        RGB 224×224 Tensor Pipeline
+                    </span>
+
                 </div>
 
-                <!-- Input Method Switcher Tabs -->
+
+                <!-- ====================================================
+                     INPUT TABS
+                     ==================================================== -->
+
                 <div class="tab-pills">
-                    <button class="tab-pill active" id="tab-upload">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload Leaf
+
+                    <button
+                        class="tab-pill active"
+                        id="tab-upload"
+                    >
+
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+
+                        Upload Leaf
+
                     </button>
-                    <button class="tab-pill" id="tab-camera">
-                        <i class="fa-solid fa-camera"></i> Live Camera
+
+
+                    <button
+                        class="tab-pill"
+                        id="tab-camera"
+                    >
+
+                        <i class="fa-solid fa-camera"></i>
+
+                        Live Camera
+
                     </button>
-                    <button class="tab-pill" id="tab-samples">
-                        <i class="fa-solid fa-images"></i> Sample Leaves
+
+
+                    <button
+                        class="tab-pill"
+                        id="tab-samples"
+                    >
+
+                        <i class="fa-solid fa-images"></i>
+
+                        Sample Leaves
+
                     </button>
+
                 </div>
 
-                <!-- Upload Dropzone View -->
-                <div class="tab-content" id="view-upload">
-                    <div class="dropzone" id="dropzone">
-                        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/jpg" hidden>
+
+
+                <!-- ====================================================
+                     UPLOAD VIEW
+                     ==================================================== -->
+
+                <div
+                    class="tab-content"
+                    id="view-upload"
+                >
+
+                    <div
+                        class="dropzone"
+                        id="dropzone"
+                    >
+
+                        <input
+                            type="file"
+                            id="file-input"
+                            accept="image/jpeg,image/png,image/webp,image/jpg"
+                            hidden
+                        >
+
+
                         <div class="dropzone-content">
+
                             <div class="upload-icon-circle">
+
                                 <i class="fa-solid fa-arrow-up-from-bracket"></i>
+
                             </div>
-                            <h3 class="drop-title">Drag and drop plant leaf image</h3>
-                            <p class="drop-subtitle">Supports JPEG, PNG, WEBP (High resolution leaf close-up recommended)</p>
-                            <button class="btn btn-primary" id="btn-browse">
-                                <i class="fa-solid fa-folder-open"></i> Browse Files
+
+
+                            <h3 class="drop-title">
+                                Drag and drop plant leaf image
+                            </h3>
+
+
+                            <p class="drop-subtitle">
+
+                                Supports JPEG, PNG, WEBP
+                                (High resolution leaf close-up recommended)
+
+                            </p>
+
+
+                            <button
+                                class="btn btn-primary"
+                                id="btn-browse"
+                            >
+
+                                <i class="fa-solid fa-folder-open"></i>
+
+                                Browse Files
+
                             </button>
+
                         </div>
+
                     </div>
+
                 </div>
 
-                <!-- Live Camera View -->
-                <div class="tab-content hidden" id="view-camera">
+
+
+                <!-- ====================================================
+                     CAMERA VIEW
+                     ==================================================== -->
+
+                <div
+                    class="tab-content hidden"
+                    id="view-camera"
+                >
+
                     <div class="camera-container">
-                        <video id="camera-feed" autoplay playsinline muted></video>
-                        <canvas id="camera-canvas" hidden></canvas>
+
+                        <video
+                            id="camera-feed"
+                            autoplay
+                            playsinline
+                            muted
+                        ></video>
+
+
+                        <canvas
+                            id="camera-canvas"
+                            hidden
+                        ></canvas>
+
+
                         <div class="camera-controls">
-                            <button class="btn btn-secondary" id="btn-start-camera">
-                                <i class="fa-solid fa-power-off"></i> Turn On Camera
+
+                            <button
+                                class="btn btn-secondary"
+                                id="btn-start-camera"
+                            >
+
+                                <i class="fa-solid fa-power-off"></i>
+
+                                Turn On Camera
+
                             </button>
-                            <button class="btn btn-primary hidden" id="btn-capture-photo">
-                                <i class="fa-solid fa-camera-retro"></i> Capture & Diagnose
+
+
+                            <button
+                                class="btn btn-primary hidden"
+                                id="btn-capture-photo"
+                            >
+
+                                <i class="fa-solid fa-camera-retro"></i>
+
+                                Capture & Diagnose
+
                             </button>
+
                         </div>
+
                     </div>
+
                 </div>
 
-                <!-- Sample Gallery View -->
-                <div class="tab-content hidden" id="view-samples">
-                    <p class="sample-intro">Click any sample leaf image below to run an instant demonstration diagnosis:</p>
-                    <div class="sample-grid" id="sample-grid">
-                        <!-- Dynamically populated sample leaves -->
+
+
+                <!-- ====================================================
+                     SAMPLE VIEW
+                     ==================================================== -->
+
+                <div
+                    class="tab-content hidden"
+                    id="view-samples"
+                >
+
+                    <p class="sample-intro">
+
+                        Click any sample leaf image below to run
+                        an instant demonstration diagnosis:
+
+                    </p>
+
+
+                    <div
+                        class="sample-grid"
+                        id="sample-grid"
+                    >
+
+                        <!-- JavaScript populates samples -->
+
                     </div>
+
                 </div>
 
-                <!-- Selected Image Preview & Action Bar -->
-                <div class="preview-container hidden" id="preview-container">
+
+
+                <!-- ====================================================
+                     IMAGE PREVIEW
+                     ==================================================== -->
+
+                <div
+                    class="preview-container hidden"
+                    id="preview-container"
+                >
+
                     <div class="preview-wrapper">
-                        <img id="preview-img" src="" alt="Selected Plant Leaf Preview">
-                        <button class="btn-clear" id="btn-clear-img" title="Remove image">
+
+                        <img
+                            id="preview-img"
+                            src=""
+                            alt="Selected Plant Leaf Preview"
+                        >
+
+
+                        <button
+                            class="btn-clear"
+                            id="btn-clear-img"
+                            title="Remove image"
+                        >
+
                             <i class="fa-solid fa-xmark"></i>
+
                         </button>
+
                     </div>
+
+
                     <div class="preview-actions">
-                        <div class="file-meta" id="file-meta"></div>
-                        <button class="btn btn-emerald" id="btn-analyze">
-                            <i class="fa-solid fa-microscope"></i> Run AI Diagnosis
+
+                        <div
+                            class="file-meta"
+                            id="file-meta"
+                        ></div>
+
+
+                        <button
+                            class="btn btn-emerald"
+                            id="btn-analyze"
+                        >
+
+                            <i class="fa-solid fa-microscope"></i>
+
+                            Run AI Diagnosis
+
                         </button>
+
                     </div>
+
                 </div>
 
-                <!-- Loading State Overlay -->
-                <div class="loading-overlay hidden" id="loading-overlay">
+
+
+                <!-- ====================================================
+                     LOADING
+                     ==================================================== -->
+
+                <div
+                    class="loading-overlay hidden"
+                    id="loading-overlay"
+                >
+
                     <div class="spinner-container">
+
                         <div class="radar-pulse"></div>
+
                         <i class="fa-solid fa-leaf loading-icon"></i>
+
                     </div>
-                    <h3 class="loading-text">Analyzing Leaf Morphology...</h3>
-                    <p class="loading-subtext">Executing feature extraction & neural inference via EfficientNetB0</p>
+
+
+                    <h3 class="loading-text">
+                        Analyzing Leaf Morphology...
+                    </h3>
+
+
+                    <p class="loading-subtext">
+
+                        Executing feature extraction &
+                        neural inference via EfficientNetB0
+
+                    </p>
+
                 </div>
+
             </div>
 
-            <!-- Right Panel: Diagnosis & Treatment Results -->
-            <div class="panel results-panel" id="results-panel">
+
+
+            <!-- ========================================================
+                 RIGHT PANEL
+                 ======================================================== -->
+
+            <div
+                class="panel results-panel"
+                id="results-panel"
+            >
+
                 <div class="panel-header">
-                    <h2><i class="fa-solid fa-stethoscope"></i> Disease Information & Recommended Management</h2>
-                    <span class="report-badge" id="report-timestamp">Ready</span>
+
+                    <h2>
+
+                        <i class="fa-solid fa-stethoscope"></i>
+
+                        Disease Information & Recommended Management
+
+                    </h2>
+
+
+                    <span
+                        class="report-badge"
+                        id="report-timestamp"
+                    >
+                        Ready
+                    </span>
+
                 </div>
 
-                <!-- Empty State -->
-                <div class="empty-results" id="empty-state">
+
+
+                <!-- ====================================================
+                     EMPTY RESULTS
+                     ==================================================== -->
+
+                <div
+                    class="empty-results"
+                    id="empty-state"
+                >
+
                     <div class="empty-icon-wrap">
+
                         <i class="fa-solid fa-spa"></i>
+
                     </div>
-                    <h3>No Diagnosis Generated Yet</h3>
-                    <p>Select or upload a leaf photo from the left panel and click <strong>Run AI Diagnosis</strong> to generate a prediction with confidence metrics and treatment information.</p>
+
+
+                    <h3>
+                        No Diagnosis Generated Yet
+                    </h3>
+
+
+                    <p>
+
+                        Select or upload a leaf photo from the left panel
+                        and click <strong>Run AI Diagnosis</strong> to
+                        generate a prediction with confidence metrics
+                        and treatment information.
+
+                    </p>
+
                 </div>
 
-                <!-- Active Results Content -->
-                <div class="results-content hidden" id="results-content">
-                    <!-- Primary Diagnosis Card -->
-                    <div class="diagnosis-card" id="primary-diagnosis-card">
+
+
+                <!-- ====================================================
+                     RESULTS
+                     ==================================================== -->
+
+                <div
+                    class="results-content hidden"
+                    id="results-content"
+                >
+
+
+                    <!-- =================================================
+                         PRIMARY DIAGNOSIS
+                         ================================================= -->
+
+                    <div
+                        class="diagnosis-card"
+                        id="primary-diagnosis-card"
+                    >
+
                         <div class="diagnosis-top">
+
                             <div class="diagnosis-header-info">
-                                <div class="crop-category" id="res-plant-name">Tomato</div>
-                                <h3 class="diagnosis-title" id="res-disease-name">Early Blight</h3>
+
+                                <div
+                                    class="crop-category"
+                                    id="res-plant-name"
+                                >
+                                    Tomato
+                                </div>
+
+
+                                <h3
+                                    class="diagnosis-title"
+                                    id="res-disease-name"
+                                >
+                                    Early Blight
+                                </h3>
+
                             </div>
-                            <div class="status-indicator" id="res-status-tag">
+
+
+                            <div
+                                class="status-indicator"
+                                id="res-status-tag"
+                            >
+
                                 <i class="fa-solid fa-triangle-exclamation"></i>
-                                <span id="res-status-text">Infected</span>
+
+                                <span id="res-status-text">
+                                    Infected
+                                </span>
+
                             </div>
+
                         </div>
+
+
+
+                        <!-- Confidence -->
 
                         <div class="confidence-box">
+
                             <div class="conf-info">
-                                <span class="conf-label">Neural Confidence Score</span>
-                                <span class="conf-val" id="res-confidence-val">98.7%</span>
+
+                                <span class="conf-label">
+                                    Neural Confidence Score
+                                </span>
+
+
+                                <span
+                                    class="conf-val"
+                                    id="res-confidence-val"
+                                >
+                                    98.7%
+                                </span>
+
                             </div>
+
+
                             <div class="meter-bar-track">
-                                <div class="meter-bar-fill" id="res-confidence-bar" style="width: 0%;"></div>
+
+                                <div
+                                    class="meter-bar-fill"
+                                    id="res-confidence-bar"
+                                    style="width: 0%;"
+                                ></div>
+
                             </div>
+
                         </div>
+
+
+
+                        <!-- Metadata -->
 
                         <div class="quick-meta-grid">
+
                             <div class="meta-item">
-                                <span class="meta-key"><i class="fa-solid fa-virus"></i> Pathogen Cause:</span>
-                                <span class="meta-value" id="res-cause-val">Fungal (Alternaria solani)</span>
+
+                                <span class="meta-key">
+
+                                    <i class="fa-solid fa-virus"></i>
+
+                                    Pathogen Cause:
+
+                                </span>
+
+
+                                <span
+                                    class="meta-value"
+                                    id="res-cause-val"
+                                >
+                                    Fungal
+                                </span>
+
                             </div>
+
+
                             <div class="meta-item">
-                                <span class="meta-key"><i class="fa-solid fa-gauge-high"></i> Severity Level:</span>
-                                <span class="meta-value severity-badge" id="res-severity-val">High</span>
+
+                                <span class="meta-key">
+
+                                    <i class="fa-solid fa-gauge-high"></i>
+
+                                    Severity Level:
+
+                                </span>
+
+
+                                <span
+                                    class="meta-value severity-badge"
+                                    id="res-severity-val"
+                                >
+                                    High
+                                </span>
+
                             </div>
+
                         </div>
+
                     </div>
 
-                    <!-- Top 5 Probability Distribution -->
+
+
+                    <!-- =================================================
+                         TOP 5
+                         ================================================= -->
+
                     <div class="card topk-card">
-                        <h4><i class="fa-solid fa-chart-column"></i> Multi-Class Probability Ranking</h4>
-                        <div class="topk-list" id="topk-list">
-                            <!-- Populated dynamically -->
+
+                        <h4>
+
+                            <i class="fa-solid fa-chart-column"></i>
+
+                            Multi-Class Probability Ranking
+
+                        </h4>
+
+
+                        <div
+                            class="topk-list"
+                            id="topk-list"
+                        >
+
+                            <!-- Populated by JavaScript -->
+
                         </div>
+
                     </div>
 
-                    <!-- Treatment & Management Accordion -->
+
+
+                    <!-- =================================================
+                         TREATMENT
+                         ================================================= -->
+
                     <div class="card treatment-card">
-                        <h4><i class="fa-solid fa-hand-holding-medical"></i> Treatment Information & Recommended Management</h4>
-                        
+
+                        <h4>
+
+                            <i class="fa-solid fa-hand-holding-medical"></i>
+
+                            Treatment Information & Recommended Management
+
+                        </h4>
+
+
+                        <!-- Symptoms -->
+
                         <div class="treatment-section">
+
                             <div class="treatment-heading symptoms-head">
+
                                 <i class="fa-solid fa-notes-medical"></i>
-                                <span>Visual Symptoms</span>
+
+                                <span>
+                                    Visual Symptoms
+                                </span>
+
                             </div>
-                            <p class="treatment-body" id="res-symptoms">Symptom details...</p>
+
+
+                            <p
+                                class="treatment-body"
+                                id="res-symptoms"
+                            >
+                                Symptom details...
+                            </p>
+
                         </div>
 
+
+
+                        <!-- Organic -->
+
                         <div class="treatment-section">
+
                             <div class="treatment-heading organic-head">
+
                                 <i class="fa-solid fa-seedling"></i>
-                                <span>General Management Information</span>
+
+                                <span>
+                                    General Management Information
+                                </span>
+
                             </div>
-                            <p class="treatment-body" id="res-organic">Organic remedies...</p>
+
+
+                            <p
+                                class="treatment-body"
+                                id="res-organic"
+                            >
+                                Organic remedies...
+                            </p>
+
                         </div>
 
+
+
+                        <!-- Chemical -->
+
                         <div class="treatment-section">
+
                             <div class="treatment-heading chemical-head">
+
                                 <i class="fa-solid fa-flask-vial"></i>
-                                <span>Treatment Information</span>
+
+                                <span>
+                                    Treatment Information
+                                </span>
+
                             </div>
-                            <p class="treatment-body" id="res-chemical">Chemical treatments...</p>
+
+
+                            <p
+                                class="treatment-body"
+                                id="res-chemical"
+                            >
+                                Chemical treatments...
+                            </p>
+
                         </div>
 
+
+
+                        <!-- Prevention -->
+
                         <div class="treatment-section">
+
                             <div class="treatment-heading prevention-head">
+
                                 <i class="fa-solid fa-shield-halved"></i>
-                                <span>Prevention & Management</span>
+
+                                <span>
+                                    Prevention & Management
+                                </span>
+
                             </div>
-                            <p class="treatment-body" id="res-prevention">Prevention tips...</p>
+
+
+                            <p
+                                class="treatment-body"
+                                id="res-prevention"
+                            >
+                                Prevention tips...
+                            </p>
+
                         </div>
+
                     </div>
 
-                    <!-- ═══════════════════════════════════════════════════ -->
-                    <!-- Grad-CAM Explainability Section                     -->
-                    <!-- ═══════════════════════════════════════════════════ -->
-                    <div class="card gradcam-card" id="gradcam-section" style="display:none;">
+
+
+                    <!-- =================================================
+                         GRAD-CAM
+                         ================================================= -->
+
+                    <div
+                        class="card gradcam-card"
+                        id="gradcam-section"
+                        style="display:none;"
+                    >
+
                         <div class="gradcam-header">
+
                             <div class="gradcam-title-group">
+
                                 <i class="fa-solid fa-eye gradcam-icon"></i>
+
                                 <div>
-                                    <h4>Explainable AI — Grad-CAM Visualization</h4>
-                                    <p class="gradcam-subtitle">Gradient-weighted Class Activation Map · Layer: <code id="gradcam-layer-name">top_activation</code></p>
+
+                                    <h4>
+                                        Explainable AI — Grad-CAM Visualization
+                                    </h4>
+
+
+                                    <p class="gradcam-subtitle">
+
+                                        Gradient-weighted Class Activation Map
+                                        · Layer:
+
+                                        <code id="gradcam-layer-name">
+                                            top_activation
+                                        </code>
+
+                                    </p>
+
                                 </div>
+
                             </div>
-                            <span class="gradcam-status-badge" id="gradcam-status-badge">
-                                <i class="fa-solid fa-brain"></i> Generating...
+
+
+                            <span
+                                class="gradcam-status-badge"
+                                id="gradcam-status-badge"
+                            >
+
+                                <i class="fa-solid fa-brain"></i>
+
+                                Generating...
+
                             </span>
+
                         </div>
 
-                        <!-- Grad-CAM error notice (shown only on failure) -->
-                        <div class="gradcam-error-notice hidden" id="gradcam-error-notice">
+
+
+                        <!-- Grad-CAM Error -->
+
+                        <div
+                            class="gradcam-error-notice hidden"
+                            id="gradcam-error-notice"
+                        >
+
                             <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span id="gradcam-error-text">Grad-CAM unavailable.</span>
+
+                            <span id="gradcam-error-text">
+                                Grad-CAM unavailable.
+                            </span>
+
                         </div>
 
-                        <!-- Three image grid -->
-                        <div class="gradcam-grid" id="gradcam-grid">
+
+
+                        <!-- Grad-CAM Images -->
+
+                        <div
+                            class="gradcam-grid"
+                            id="gradcam-grid"
+                        >
+
                             <div class="gradcam-img-card">
+
                                 <div class="gradcam-img-label">
-                                    <i class="fa-solid fa-image"></i> Original Image
+
+                                    <i class="fa-solid fa-image"></i>
+
+                                    Original Image
+
                                 </div>
+
+
                                 <div class="gradcam-img-wrap">
-                                    <img id="gradcam-original" src="" alt="Original plant leaf image" class="gradcam-img">
+
+                                    <img
+                                        id="gradcam-original"
+                                        src=""
+                                        alt="Original plant leaf image"
+                                        class="gradcam-img"
+                                    >
+
                                 </div>
+
                             </div>
+
+
+
                             <div class="gradcam-img-card">
+
                                 <div class="gradcam-img-label heatmap-label">
-                                    <i class="fa-solid fa-fire-flame-curved"></i> Grad-CAM Heatmap
+
+                                    <i class="fa-solid fa-fire-flame-curved"></i>
+
+                                    Grad-CAM Heatmap
+
                                 </div>
+
+
                                 <div class="gradcam-img-wrap">
-                                    <img id="gradcam-heatmap" src="" alt="Grad-CAM heatmap visualization" class="gradcam-img">
+
+                                    <img
+                                        id="gradcam-heatmap"
+                                        src=""
+                                        alt="Grad-CAM heatmap visualization"
+                                        class="gradcam-img"
+                                    >
+
                                 </div>
+
                             </div>
+
+
+
                             <div class="gradcam-img-card">
+
                                 <div class="gradcam-img-label overlay-label">
-                                    <i class="fa-solid fa-layer-group"></i> Grad-CAM Overlay
+
+                                    <i class="fa-solid fa-layer-group"></i>
+
+                                    Grad-CAM Overlay
+
                                 </div>
+
+
                                 <div class="gradcam-img-wrap">
-                                    <img id="gradcam-overlay" src="" alt="Grad-CAM overlay on original image" class="gradcam-img">
+
+                                    <img
+                                        id="gradcam-overlay"
+                                        src=""
+                                        alt="Grad-CAM overlay on original image"
+                                        class="gradcam-img"
+                                    >
+
                                 </div>
+
                             </div>
+
                         </div>
+
+
+
+                        <!-- Legend -->
 
                         <div class="gradcam-legend">
-                            <span class="legend-label">Activation Intensity:</span>
-                            <div class="legend-gradient"></div>
-                            <span class="legend-low">Low</span>
-                            <span class="legend-high">High</span>
-                            <span class="legend-hint">
-                                <i class="fa-solid fa-circle-info"></i>
-                                Red/yellow regions indicate where the model focused its attention for this prediction.
+
+                            <span class="legend-label">
+                                Activation Intensity:
                             </span>
+
+
+                            <div class="legend-gradient"></div>
+
+
+                            <span class="legend-low">
+                                Low
+                            </span>
+
+
+                            <span class="legend-high">
+                                High
+                            </span>
+
+
+                            <span class="legend-hint">
+
+                                <i class="fa-solid fa-circle-info"></i>
+
+                                Red/yellow regions indicate where
+                                the model focused its attention
+                                for this prediction.
+
+                            </span>
+
                         </div>
+
                     </div>
+
                 </div>
+
             </div>
+
         </section>
+
     </main>
 
-    <!-- 86 Disease Encyclopedia Modal -->
-    <div class="modal-backdrop hidden" id="encyclopedia-modal">
+
+
+    <!-- ================================================================
+         ENCYCLOPEDIA MODAL
+         ================================================================ -->
+
+    <div
+        class="modal-backdrop hidden"
+        id="encyclopedia-modal"
+    >
+
         <div class="modal-window">
+
+
             <div class="modal-header">
+
                 <div class="modal-title-group">
+
                     <i class="fa-solid fa-book-medical modal-icon"></i>
+
                     <div>
-                        <h3>Plant Disease Encyclopedia (86 Categories)</h3>
-                        <p>Search, filter, and inspect symptoms and treatment for all supported crops</p>
+
+                        <h3>
+                            Plant Disease Encyclopedia (86 Categories)
+                        </h3>
+
+                        <p>
+                            Search, filter, and inspect symptoms
+                            and treatment for all supported crops
+                        </p>
+
                     </div>
+
                 </div>
-                <button class="modal-close" id="btn-close-modal">
+
+
+                <button
+                    class="modal-close"
+                    id="btn-close-modal"
+                >
+
                     <i class="fa-solid fa-xmark"></i>
+
                 </button>
+
             </div>
+
+
+
+            <!-- Search -->
 
             <div class="modal-search-bar">
+
                 <div class="search-input-wrap">
+
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="encyclopedia-search" placeholder="Search by crop name (e.g. Tomato, Corn, Wheat, Lemon) or disease...">
+
+                    <input
+                        type="text"
+                        id="encyclopedia-search"
+                        placeholder="Search by crop name or disease..."
+                    >
+
                 </div>
+
+
                 <div class="filter-pills">
-                    <button class="filter-pill active" data-filter="all">All (86)</button>
-                    <button class="filter-pill" data-filter="healthy">Healthy Only</button>
-                    <button class="filter-pill" data-filter="diseased">Diseased Only</button>
+
+                    <button
+                        class="filter-pill active"
+                        data-filter="all"
+                    >
+                        All (86)
+                    </button>
+
+
+                    <button
+                        class="filter-pill"
+                        data-filter="healthy"
+                    >
+                        Healthy Only
+                    </button>
+
+
+                    <button
+                        class="filter-pill"
+                        data-filter="diseased"
+                    >
+                        Diseased Only
+                    </button>
+
                 </div>
+
             </div>
+
+
+
+            <!-- Encyclopedia Body -->
 
             <div class="modal-body encyclopedia-layout">
-                <div class="encyclopedia-sidebar" id="encyclopedia-list">
-                    <!-- Populated via API -->
+
+                <div
+                    class="encyclopedia-sidebar"
+                    id="encyclopedia-list"
+                >
+                    <!-- Populated by JavaScript -->
                 </div>
-                <div class="encyclopedia-detail" id="encyclopedia-detail" style="display: none;">
-                    <h4 id="enc-detail-title" class="enc-detail-title">Select a condition</h4>
-                    
-                    <div class="enc-section">
-                        <h5><i class="fa-solid fa-eye"></i> Visual Symptoms</h5>
-                        <p id="enc-detail-symptoms">Select a disease on the left to view details.</p>
-                    </div>
+
+
+                <div
+                    class="encyclopedia-detail"
+                    id="encyclopedia-detail"
+                    style="display:none;"
+                >
+
+                    <h4
+                        id="enc-detail-title"
+                        class="enc-detail-title"
+                    >
+                        Select a condition
+                    </h4>
+
 
                     <div class="enc-section">
-                        <h5><i class="fa-solid fa-leaf"></i> General Management Information</h5>
+
+                        <h5>
+
+                            <i class="fa-solid fa-eye"></i>
+
+                            Visual Symptoms
+
+                        </h5>
+
+
+                        <p id="enc-detail-symptoms">
+                            Select a disease on the left to view details.
+                        </p>
+
+                    </div>
+
+
+                    <div class="enc-section">
+
+                        <h5>
+
+                            <i class="fa-solid fa-leaf"></i>
+
+                            General Management Information
+
+                        </h5>
+
+
                         <p id="enc-detail-organic"></p>
+
                     </div>
 
+
                     <div class="enc-section">
-                        <h5><i class="fa-solid fa-flask-vial"></i> Treatment Information</h5>
+
+                        <h5>
+
+                            <i class="fa-solid fa-flask-vial"></i>
+
+                            Treatment Information
+
+                        </h5>
+
+
                         <p id="enc-detail-chemical"></p>
+
                     </div>
 
+
                     <div class="enc-section">
-                        <h5><i class="fa-solid fa-shield-halved"></i> Prevention & Management</h5>
+
+                        <h5>
+
+                            <i class="fa-solid fa-shield-halved"></i>
+
+                            Prevention & Management
+
+                        </h5>
+
+
                         <p id="enc-detail-prevention"></p>
+
                     </div>
+
                 </div>
+
             </div>
+
         </div>
+
     </div>
 
-    <!-- Toast Notifications -->
-    <div class="toast-container" id="toast-container"></div>
 
-    <!-- Footer -->
+
+    <!-- ================================================================
+         TOAST NOTIFICATIONS
+         ================================================================ -->
+
+    <div
+        class="toast-container"
+        id="toast-container"
+    ></div>
+
+
+
+    <!-- ================================================================
+         FOOTER
+         ================================================================ -->
+
     <footer class="footer">
+
         <div class="footer-content">
+
             <div class="footer-left">
-                <p><strong>AgriVision AI</strong> &bull; Deep Learning Plant Disease Classification Project</p>
-                <p class="footer-sub">Trained on Master Plant Village Dataset with Transfer Learning & Fine-Tuned EfficientNetB0</p>
+
+                <p>
+
+                    <strong>
+                        AgriVision AI
+                    </strong>
+
+                    &bull;
+
+                    Deep Learning Plant Disease Classification Project
+
+                </p>
+
+
+                <p class="footer-sub">
+
+                    Trained on Master Plant Village Dataset
+                    with Transfer Learning & Fine-Tuned EfficientNetB0
+
+                </p>
+
             </div>
+
+
             <div class="footer-right">
-                <a href="/docs" target="_blank"><i class="fa-solid fa-code"></i> OpenAPI</a>
-                <a href="/health" target="_blank"><i class="fa-solid fa-heart-pulse"></i> Health Check</a>
-                <a href="https://github.com" target="_blank"><i class="fa-brands fa-github"></i> Repository</a>
+
+                <a
+                    href="/docs"
+                    target="_blank"
+                >
+
+                    <i class="fa-solid fa-code"></i>
+
+                    OpenAPI
+
+                </a>
+
+
+                <a
+                    href="/health"
+                    target="_blank"
+                >
+
+                    <i class="fa-solid fa-heart-pulse"></i>
+
+                    Health Check
+
+                </a>
+
+
+                <a
+                    href="https://github.com"
+                    target="_blank"
+                >
+
+                    <i class="fa-brands fa-github"></i>
+
+                    Repository
+
+                </a>
+
             </div>
+
         </div>
+
     </footer>
 
-    <!-- Main JavaScript -->
+
+
+    <!-- ================================================================
+         MAIN JAVASCRIPT
+         
+         IMPORTANT:
+         Actual file is:
+         static/js/main.js
+         ================================================================ -->
+
     <script src="/static/js/main.js"></script>
+
 </body>
 </html>

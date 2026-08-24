@@ -17,8 +17,13 @@ from src.constants import CLASS_NAMES_PATH, DISEASE_INFO_PATH
 from src.exception import PlantDiseaseException
 from src.logger import logger
 from src.pipeline.predict_pipeline import PredictionPipeline
-from src.utils.common import decode_base64_image, parse_class_metadata, read_json
+from src.utils.common import (
+    decode_base64_image,
+    parse_class_metadata,
+    read_json,
+)
 from src.utils.image_validator import validate_image
+from src.utils.clip_plant_gate import validate_plant_image
 from src.utils.gradcam import (
     generate_gradcam_heatmap,
     heatmap_to_base64,
@@ -26,48 +31,73 @@ from src.utils.gradcam import (
     pil_to_base64,
 )
 
-# Global pipeline instance
+
+# ============================================================================
+# GLOBALS
+# ============================================================================
+
 _pipeline: Optional[PredictionPipeline] = None
 START_TIME = time.time()
 
 
 def get_pipeline() -> PredictionPipeline:
     """
-    Lazy loader for PredictionPipeline ensuring thread-safe access.
+    Lazy loader for PredictionPipeline.
     """
     global _pipeline
+
     if _pipeline is None:
         logger.info("Initializing PredictionPipeline instance...")
         _pipeline = PredictionPipeline()
+
     return _pipeline
 
+
+# ============================================================================
+# FASTAPI LIFESPAN
+# ============================================================================
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    FastAPI lifespan context manager for startup and shutdown event handling.
+    FastAPI startup and shutdown lifecycle.
     """
+
     logger.info("Plant Disease Classifier Application starting up...")
+
     try:
         _ = get_pipeline()
         logger.info("PredictionPipeline warmed up and ready for traffic.")
+
     except Exception as e:
         logger.error(f"Lifespan initialization error: {e}")
+
     yield
+
     logger.info("Plant Disease Classifier Application shutting down.")
 
 
-# Initialize FastAPI App
+# ============================================================================
+# FASTAPI APPLICATION
+# ============================================================================
+
 app = FastAPI(
     title="Plant Disease Classifier API",
-    description="Production-grade Deep Learning API for detecting 86 categories of crop diseases using EfficientNetB0.",
+    description=(
+        "Production-grade Deep Learning API for detecting "
+        "86 categories of crop diseases using EfficientNetB0."
+    ),
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
-# Enable CORS
+
+# ============================================================================
+# CORS
+# ============================================================================
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -76,142 +106,421 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Setup directories
+
+# ============================================================================
+# DIRECTORIES
+# ============================================================================
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
 os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
-# Mount Static Files & Jinja2 Templates
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+app.mount(
+    "/static",
+    StaticFiles(directory=STATIC_DIR),
+    name="static",
+)
+
+templates = Jinja2Templates(
+    directory=TEMPLATES_DIR
+)
 
 
-# Pydantic Request Schemas
+# ============================================================================
+# REQUEST SCHEMAS
+# ============================================================================
+
 class Base64PredictionRequest(BaseModel):
-    image: str = Field(..., description="Base64 encoded image string (with or without data URI header)")
-    top_k: Optional[int] = Field(5, description="Number of top predictions to return (1-10)")
+    image: str = Field(
+        ...,
+        description=(
+            "Base64 encoded image string "
+            "(with or without data URI header)"
+        ),
+    )
+
+    top_k: Optional[int] = Field(
+        5,
+        description="Number of top predictions to return (1-10)",
+    )
 
 
 # ============================================================================
-# Web UI Endpoints
+# HELPER FUNCTIONS
 # ============================================================================
 
-@app.get("/", response_class=HTMLResponse, tags=["Web Interface"])
+ALLOWED_IMAGE_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/jpg",
+    "application/octet-stream",
+]
+
+
+def validate_uploaded_plant_image(
+    pil_image: Image.Image,
+):
+    """
+    Run both validation stages:
+
+    1. CLIP plant/non-plant gate.
+    2. Existing image validator.
+
+    Returns:
+        (True, None) if valid.
+
+    Otherwise:
+        (False, JSONResponse)
+    """
+
+    # ------------------------------------------------------------------------
+    # STEP 1: CLIP PLANT GATE
+    # ------------------------------------------------------------------------
+
+    try:
+        is_plant, plant_confidence = validate_plant_image(
+            pil_image
+        )
+
+    except Exception as exc:
+        logger.error(
+            f"CLIP plant validation failed: {exc}"
+        )
+
+        return False, JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error_type": "plant_validation_error",
+                "message": (
+                    "Unable to validate whether the image "
+                    "contains a plant."
+                ),
+            },
+        )
+
+    if not is_plant:
+        logger.warning(
+            "Non-plant image rejected by CLIP gate. "
+            f"Confidence={plant_confidence:.4f}"
+        )
+
+        return False, JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error_type":"invalid_image",
+                "message": (
+                    "This image does not appear to contain "
+                    "a plant. Please upload a clear plant "
+                    "leaf image."
+                ),
+                "plant_confidence": round(
+                    plant_confidence,
+                    4,
+                ),
+            },
+        )
+
+    # ------------------------------------------------------------------------
+    # STEP 2: EXISTING IMAGE VALIDATOR
+    # ------------------------------------------------------------------------
+
+    is_valid, reason = validate_image(
+        pil_image
+    )
+
+    if not is_valid:
+        logger.warning(
+            f"Image rejected by image validator: {reason}"
+        )
+
+        return False, JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error_type": "invalid_image",
+                "message": (
+                    "Invalid image. Please upload a "
+                    "clear image of a plant leaf."
+                ),
+                "reason": reason,
+            },
+        )
+
+    return True, None
+
+
+# ============================================================================
+# WEB UI
+# ============================================================================
+
+@app.get(
+    "/",
+    response_class=HTMLResponse,
+    tags=["Web Interface"],
+)
 async def index_view(request: Request):
     """
-    Renders the modern Plant Disease Classifier web interface.
+    Render the Plant Disease Classifier web interface.
     """
-    classes_list = read_json(CLASS_NAMES_PATH)
+
+    classes_list = read_json(
+        CLASS_NAMES_PATH
+    )
+
     return templates.TemplateResponse(
         request,
         "index.html",
         {
             "total_classes": len(classes_list),
-            "version": "1.0.0"
-        }
+            "version": "1.0.0",
+        },
     )
 
 
 # ============================================================================
-# API Endpoints
+# HEALTH
 # ============================================================================
 
-@app.get("/health", tags=["System"])
+@app.get(
+    "/health",
+    tags=["System"],
+)
 async def health_check():
     """
-    System health check endpoint verifying model status and server uptime.
+    System health check.
     """
-    uptime_seconds = int(time.time() - START_TIME)
+
+    uptime_seconds = int(
+        time.time() - START_TIME
+    )
+
     pipe = get_pipeline()
-    is_ready = pipe is not None and pipe.predictor.model is not None
+
+    is_ready = (
+        pipe is not None
+        and pipe.predictor.model is not None
+    )
 
     return {
-        "status": "healthy" if is_ready else "degraded",
+        "status": (
+            "healthy"
+            if is_ready
+            else "degraded"
+        ),
         "service": "Plant Disease Classifier API",
         "model_loaded": is_ready,
-        "total_classes": len(pipe.predictor.classes) if is_ready else 86,
+        "total_classes": (
+            len(pipe.predictor.classes)
+            if is_ready
+            else 86
+        ),
         "uptime_seconds": uptime_seconds,
-        "framework": "TensorFlow / Keras (EfficientNetB0)"
+        "framework": (
+            "TensorFlow / Keras (EfficientNetB0)"
+        ),
     }
 
 
-@app.post("/predict", tags=["Inference"])
+# ============================================================================
+# /PREDICT
+# ============================================================================
+
+@app.post(
+    "/predict",
+    tags=["Inference"],
+)
 async def predict_file(
-    file: UploadFile = File(..., description="Plant leaf image file (JPEG, PNG, WEBP)"),
-    top_k: int = 5
+    file: UploadFile = File(
+        ...,
+        description=(
+            "Plant leaf image file "
+            "(JPEG, PNG, WEBP)"
+        ),
+    ),
+    top_k: int = 5,
 ):
     """
-    Classify a plant leaf image by uploading a multipart file.
-    Returns disease diagnosis, probability distribution, and comprehensive treatment remedy.
+    Classify a plant leaf image.
+
+    CLIP plant gate runs BEFORE the disease classifier.
     """
-    # Validate content type
-    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/jpg", "application/octet-stream"]
-    if file.content_type and file.content_type.lower() not in allowed_types:
+
+    # ------------------------------------------------------------------------
+    # FILE TYPE
+    # ------------------------------------------------------------------------
+
+    if (
+        file.content_type
+        and file.content_type.lower()
+        not in ALLOWED_IMAGE_TYPES
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file type: {file.content_type}. Please upload a valid JPEG, PNG, or WEBP image."
+            detail=(
+                f"Invalid file type: "
+                f"{file.content_type}. "
+                "Please upload a valid JPEG, PNG, "
+                "or WEBP image."
+            ),
         )
 
     try:
-        contents = await file.read()
-        if len(contents) == 0:
-            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-        # ── Input validation (conservative heuristic) ─────────────────────
-        pil_image = Image.open(io.BytesIO(contents)).convert("RGB")
-        is_valid, reason = validate_image(pil_image)
-        if not is_valid:
+        # --------------------------------------------------------------------
+        # READ FILE
+        # --------------------------------------------------------------------
+
+        contents = await file.read()
+
+        if len(contents) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Uploaded file is empty.",
+            )
+
+        # --------------------------------------------------------------------
+        # OPEN IMAGE
+        # --------------------------------------------------------------------
+
+        try:
+            pil_image = (
+                Image.open(
+                    io.BytesIO(contents)
+                ).convert("RGB")
+            )
+
+        except Exception:
             return JSONResponse(
                 status_code=400,
                 content={
                     "success": False,
                     "error_type": "invalid_image",
-                    "message": "Invalid image. Please upload a clear image of a plant leaf.",
+                    "message": (
+                        "The uploaded file is not "
+                        "a valid image."
+                    ),
                 },
             )
 
+        # --------------------------------------------------------------------
+        # CLIP + IMAGE VALIDATION
+        # --------------------------------------------------------------------
+
+        is_valid, error_response = (
+            validate_uploaded_plant_image(
+                pil_image
+            )
+        )
+
+        if not is_valid:
+            return error_response
+
+        # --------------------------------------------------------------------
+        # PREDICTION
+        # --------------------------------------------------------------------
+
         pipe = get_pipeline()
-        result = pipe.predict_image(contents, top_k=top_k)
-        return JSONResponse(content=result, status_code=200)
+
+        result = pipe.predict_image(
+            contents,
+            top_k=top_k,
+        )
+
+        return JSONResponse(
+            content=result,
+            status_code=200,
+        )
 
     except PlantDiseaseException as pde:
-        logger.error(f"Prediction exception: {pde}")
-        raise HTTPException(status_code=500, detail=str(pde))
+
+        logger.error(
+            f"Prediction exception: {pde}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(pde),
+        )
+
+    except HTTPException:
+        raise
+
     except Exception as e:
-        logger.error(f"Unexpected prediction failure: {e}")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+        logger.error(
+            f"Unexpected prediction failure: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction failed: {str(e)}",
+        )
 
 
-@app.post("/predict-base64", tags=["Inference"])
-async def predict_base64_endpoint(payload: Base64PredictionRequest):
+# ============================================================================
+# /PREDICT-BASE64
+# ============================================================================
+
+@app.post(
+    "/predict-base64",
+    tags=["Inference"],
+)
+async def predict_base64_endpoint(
+    payload: Base64PredictionRequest,
+):
     """
-    Classify an image provided as a Base64 string (useful for webcams or mobile clients).
+    Classify a Base64 encoded image.
+
+    CLIP plant gate runs before prediction.
+    Grad-CAM is generated after successful prediction.
     """
+
     try:
+
+        # --------------------------------------------------------------------
+        # DECODE IMAGE
+        # --------------------------------------------------------------------
+
+        original_pil = decode_base64_image(
+            payload.image
+        )
+
+        # --------------------------------------------------------------------
+        # CLIP + IMAGE VALIDATION
+        # --------------------------------------------------------------------
+
+        is_valid, error_response = (
+            validate_uploaded_plant_image(
+                original_pil
+            )
+        )
+
+        if not is_valid:
+            return error_response
+
+        # --------------------------------------------------------------------
+        # PIPELINE
+        # --------------------------------------------------------------------
+
         pipe = get_pipeline()
 
-        # ── Decode Base64 manually to retain the original PIL image for Grad-CAM ──
-        original_pil = decode_base64_image(payload.image)
+        prediction_result = pipe.predict_image(
+            original_pil,
+            top_k=payload.top_k or 5,
+        )
 
-        # ── Input validation (conservative heuristic) ─────────────────────
-        is_valid, reason = validate_image(original_pil)
-        if not is_valid:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error_type": "invalid_image",
-                    "message": "Invalid image. Please upload a clear image of a plant leaf.",
-                },
-            )
+        # --------------------------------------------------------------------
+        # GRAD-CAM
+        # --------------------------------------------------------------------
 
-        # ── Standard prediction (must not fail due to Grad-CAM) ──────────
-        prediction_result = pipe.predict_image(original_pil, top_k=payload.top_k or 5)
-
-        # ── Grad-CAM computation ─────────────────────────────────────────
         gradcam_payload = {
             "success": False,
             "target_layer": "top_activation",
@@ -219,113 +528,205 @@ async def predict_base64_endpoint(payload: Base64PredictionRequest):
             "original_image": None,
             "heatmap": None,
             "overlay": None,
-            "error": None
+            "error": None,
         }
 
         try:
-            # Preprocess exactly as the predictor does
+
             predictor = pipe.predictor
-            img_tensor = predictor.preprocess_image(original_pil)   # shape (1, 224, 224, 3)
 
-            # Determine predicted class index from prediction result
-            pred_class_name = prediction_result["prediction"]["class_name"]
-            predicted_class_idx = predictor.classes.index(pred_class_name)
-
-            # Generate Grad-CAM heatmap
-            heatmap, used_class_idx = generate_gradcam_heatmap(
-                model=predictor.model,
-                img_tensor=img_tensor,
-                class_idx=predicted_class_idx
+            img_tensor = (
+                predictor.preprocess_image(
+                    original_pil
+                )
             )
 
-            # Encode original image as base64
-            original_b64 = pil_to_base64(original_pil)
-
-            # Encode coloured heatmap as base64
-            heatmap_b64 = heatmap_to_base64(
-                heatmap=heatmap,
-                target_size=original_pil.size   # (width, height)
+            pred_class_name = (
+                prediction_result[
+                    "prediction"
+                ]["class_name"]
             )
 
-            # Encode blended overlay as base64
-            overlay_b64 = overlay_heatmap_on_image(
-                original_pil=original_pil,
-                heatmap=heatmap,
-                alpha=0.45
+            predicted_class_idx = (
+                predictor.classes.index(
+                    pred_class_name
+                )
             )
 
-            gradcam_payload.update({
-                "success": True,
-                "target_class": used_class_idx,
-                "original_image": original_b64,
-                "heatmap": heatmap_b64,
-                "overlay": overlay_b64,
-            })
-            logger.info(f"Grad-CAM generated successfully for class_idx={used_class_idx}")
+            heatmap, used_class_idx = (
+                generate_gradcam_heatmap(
+                    model=predictor.model,
+                    img_tensor=img_tensor,
+                    class_idx=predicted_class_idx,
+                )
+            )
+
+            original_b64 = (
+                pil_to_base64(
+                    original_pil
+                )
+            )
+
+            heatmap_b64 = (
+                heatmap_to_base64(
+                    heatmap=heatmap,
+                    target_size=original_pil.size,
+                )
+            )
+
+            overlay_b64 = (
+                overlay_heatmap_on_image(
+                    original_pil=original_pil,
+                    heatmap=heatmap,
+                    alpha=0.45,
+                )
+            )
+
+            gradcam_payload.update(
+                {
+                    "success": True,
+                    "target_class": used_class_idx,
+                    "original_image": original_b64,
+                    "heatmap": heatmap_b64,
+                    "overlay": overlay_b64,
+                }
+            )
+
+            logger.info(
+                "Grad-CAM generated successfully "
+                f"for class_idx={used_class_idx}"
+            )
 
         except Exception as gcam_err:
-            # Grad-CAM failure must NOT kill the prediction response
-            logger.error(f"Grad-CAM generation failed (prediction still returned): {gcam_err}")
-            gradcam_payload["error"] = str(gcam_err)
 
-        prediction_result["gradcam"] = gradcam_payload
-        return JSONResponse(content=prediction_result, status_code=200)
+            logger.error(
+                "Grad-CAM generation failed "
+                f"(prediction still returned): "
+                f"{gcam_err}"
+            )
+
+            gradcam_payload["error"] = str(
+                gcam_err
+            )
+
+        prediction_result["gradcam"] = (
+            gradcam_payload
+        )
+
+        return JSONResponse(
+            content=prediction_result,
+            status_code=200,
+        )
 
     except PlantDiseaseException as pde:
-        logger.error(f"Base64 prediction exception: {pde}")
-        raise HTTPException(status_code=400, detail=str(pde))
+
+        logger.error(
+            f"Base64 prediction exception: {pde}"
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(pde),
+        )
+
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+
+        logger.error(
+            f"Unexpected error: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
 
 
-@app.post("/predict-with-gradcam", tags=["Inference"])
+# ============================================================================
+# /PREDICT-WITH-GRADCAM
+# ============================================================================
+
+@app.post(
+    "/predict-with-gradcam",
+    tags=["Inference"],
+)
 async def predict_with_gradcam(
-    file: UploadFile = File(..., description="Plant leaf image (JPEG, PNG, WEBP)"),
-    top_k: int = 5
+    file: UploadFile = File(
+        ...,
+        description=(
+            "Plant leaf image "
+            "(JPEG, PNG, WEBP)"
+        ),
+    ),
+    top_k: int = 5,
 ):
     """
-    Classify a plant leaf image AND generate Grad-CAM explainability maps.
+    Classify a plant leaf and generate Grad-CAM.
 
-    Returns the standard prediction result PLUS:
-    - gradcam.original_image  — base64 encoded original image
-    - gradcam.heatmap         — base64 Jet-coloured Grad-CAM heatmap
-    - gradcam.overlay         — base64 Grad-CAM heatmap blended onto original
-    - gradcam.target_layer    — name of the convolutional layer used
-    - gradcam.target_class    — predicted class index used for gradients
-    - gradcam.success         — whether Grad-CAM succeeded
-    - gradcam.error           — error message if Grad-CAM failed (prediction still returned)
+    CLIP plant gate runs before the disease classifier.
     """
-    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/jpg", "application/octet-stream"]
-    if file.content_type and file.content_type.lower() not in allowed_types:
+
+    if (
+        file.content_type
+        and file.content_type.lower()
+        not in ALLOWED_IMAGE_TYPES
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file type: {file.content_type}. Please upload JPEG, PNG, or WEBP."
+            detail=(
+                f"Invalid file type: "
+                f"{file.content_type}. "
+                "Please upload JPEG, PNG, or WEBP."
+            ),
         )
 
     try:
-        contents = await file.read()
-        if len(contents) == 0:
-            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-        # ── Input validation (conservative heuristic) ─────────────────────
-        pil_image = Image.open(io.BytesIO(contents)).convert("RGB")
-        is_valid, reason = validate_image(pil_image)
-        if not is_valid:
-            return JSONResponse(
+        contents = await file.read()
+
+        if len(contents) == 0:
+            raise HTTPException(
                 status_code=400,
-                content={
-                    "success": False,
-                    "error_type": "invalid_image",
-                    "message": "Invalid image. Please upload a clear image of a plant leaf.",
-                },
+                detail="Uploaded file is empty.",
             )
 
-        # ── Standard prediction (must not fail due to Grad-CAM) ──────────
-        pipe = get_pipeline()
-        prediction_result = pipe.predict_image(contents, top_k=top_k)
+        # --------------------------------------------------------------------
+        # OPEN IMAGE
+        # --------------------------------------------------------------------
 
-        # ── Grad-CAM computation ─────────────────────────────────────────
+        original_pil = (
+            Image.open(
+                io.BytesIO(contents)
+            ).convert("RGB")
+        )
+
+        # --------------------------------------------------------------------
+        # CLIP + IMAGE VALIDATION
+        # --------------------------------------------------------------------
+
+        is_valid, error_response = (
+            validate_uploaded_plant_image(
+                original_pil
+            )
+        )
+
+        if not is_valid:
+            return error_response
+
+        # --------------------------------------------------------------------
+        # PREDICTION
+        # --------------------------------------------------------------------
+
+        pipe = get_pipeline()
+
+        prediction_result = pipe.predict_image(
+            contents,
+            top_k=top_k,
+        )
+
+        # --------------------------------------------------------------------
+        # GRAD-CAM
+        # --------------------------------------------------------------------
+
         gradcam_payload = {
             "success": False,
             "target_layer": "top_activation",
@@ -333,119 +734,339 @@ async def predict_with_gradcam(
             "original_image": None,
             "heatmap": None,
             "overlay": None,
-            "error": None
+            "error": None,
         }
 
         try:
-            # Reconstruct PIL image from raw bytes (original dimensions)
-            original_pil = Image.open(io.BytesIO(contents)).convert("RGB")
 
-            # Preprocess exactly as the predictor does
             predictor = pipe.predictor
-            img_tensor = predictor.preprocess_image(contents)   # shape (1, 224, 224, 3)
 
-            # Determine predicted class index from prediction result
-            pred_class_name = prediction_result["prediction"]["class_name"]
-            predicted_class_idx = predictor.classes.index(pred_class_name)
-
-            # Generate Grad-CAM heatmap
-            heatmap, used_class_idx = generate_gradcam_heatmap(
-                model=predictor.model,
-                img_tensor=img_tensor,
-                class_idx=predicted_class_idx
+            img_tensor = (
+                predictor.preprocess_image(
+                    contents
+                )
             )
 
-            # Encode original image as base64
-            original_b64 = pil_to_base64(original_pil)
-
-            # Encode coloured heatmap as base64
-            heatmap_b64 = heatmap_to_base64(
-                heatmap=heatmap,
-                target_size=original_pil.size   # (width, height)
+            pred_class_name = (
+                prediction_result[
+                    "prediction"
+                ]["class_name"]
             )
 
-            # Encode blended overlay as base64
-            overlay_b64 = overlay_heatmap_on_image(
-                original_pil=original_pil,
-                heatmap=heatmap,
-                alpha=0.45
+            predicted_class_idx = (
+                predictor.classes.index(
+                    pred_class_name
+                )
             )
 
-            gradcam_payload.update({
-                "success": True,
-                "target_class": used_class_idx,
-                "original_image": original_b64,
-                "heatmap": heatmap_b64,
-                "overlay": overlay_b64,
-            })
-            logger.info(f"Grad-CAM generated successfully for class_idx={used_class_idx}")
+            heatmap, used_class_idx = (
+                generate_gradcam_heatmap(
+                    model=predictor.model,
+                    img_tensor=img_tensor,
+                    class_idx=predicted_class_idx,
+                )
+            )
+
+            original_b64 = (
+                pil_to_base64(
+                    original_pil
+                )
+            )
+
+            heatmap_b64 = (
+                heatmap_to_base64(
+                    heatmap=heatmap,
+                    target_size=original_pil.size,
+                )
+            )
+
+            overlay_b64 = (
+                overlay_heatmap_on_image(
+                    original_pil=original_pil,
+                    heatmap=heatmap,
+                    alpha=0.45,
+                )
+            )
+
+            gradcam_payload.update(
+                {
+                    "success": True,
+                    "target_class": used_class_idx,
+                    "original_image": original_b64,
+                    "heatmap": heatmap_b64,
+                    "overlay": overlay_b64,
+                }
+            )
+
+            logger.info(
+                "Grad-CAM generated successfully "
+                f"for class_idx={used_class_idx}"
+            )
 
         except Exception as gcam_err:
-            # Grad-CAM failure must NOT kill the prediction response
-            logger.error(f"Grad-CAM generation failed (prediction still returned): {gcam_err}")
-            gradcam_payload["error"] = str(gcam_err)
 
-        prediction_result["gradcam"] = gradcam_payload
-        return JSONResponse(content=prediction_result, status_code=200)
+            logger.error(
+                "Grad-CAM generation failed "
+                f"(prediction still returned): "
+                f"{gcam_err}"
+            )
+
+            gradcam_payload["error"] = str(
+                gcam_err
+            )
+
+        prediction_result["gradcam"] = (
+            gradcam_payload
+        )
+
+        return JSONResponse(
+            content=prediction_result,
+            status_code=200,
+        )
 
     except PlantDiseaseException as pde:
-        logger.error(f"Grad-CAM endpoint exception: {pde}")
-        raise HTTPException(status_code=500, detail=str(pde))
+
+        logger.error(
+            f"Grad-CAM endpoint exception: {pde}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(pde),
+        )
+
+    except HTTPException:
+        raise
+
     except Exception as e:
-        logger.error(f"Unexpected error in /predict-with-gradcam: {e}")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+        logger.error(
+            f"Unexpected error in "
+            f"/predict-with-gradcam: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Prediction failed: {str(e)}"
+            ),
+        )
 
 
-@app.post("/batch-predict", tags=["Inference"])
+# ============================================================================
+# /BATCH-PREDICT
+# ============================================================================
+
+@app.post(
+    "/batch-predict",
+    tags=["Inference"],
+)
 async def batch_predict_endpoint(
-    files: List[UploadFile] = File(..., description="List of plant leaf images"),
-    top_k: int = 3
+    files: List[UploadFile] = File(
+        ...,
+        description="List of plant leaf images",
+    ),
+    top_k: int = 3,
 ):
     """
-    Run batch inference on multiple plant leaf images concurrently.
+    Run batch prediction.
+
+    Every image is checked by the CLIP plant gate
+    before being passed to the disease classifier.
     """
+
     if len(files) > 20:
-        raise HTTPException(status_code=400, detail="Maximum batch size is 20 images.")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Maximum batch size is 20 images."
+            ),
+        )
 
     try:
+
         image_bytes_list = []
+
         for f in files:
-            image_bytes_list.append(await f.read())
+
+            if (
+                f.content_type
+                and f.content_type.lower()
+                not in ALLOWED_IMAGE_TYPES
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Invalid file type for "
+                        f"{f.filename}."
+                    ),
+                )
+
+            contents = await f.read()
+
+            if len(contents) == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"File {f.filename} is empty."
+                    ),
+                )
+
+            try:
+
+                pil_image = (
+                    Image.open(
+                        io.BytesIO(contents)
+                    ).convert("RGB")
+                )
+
+            except Exception:
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"File {f.filename} is not "
+                        "a valid image."
+                    ),
+                )
+
+            # ---------------------------------------------------------------
+            # CLIP + EXISTING VALIDATION
+            # ---------------------------------------------------------------
+
+            is_valid, error_response = (
+                validate_uploaded_plant_image(
+                    pil_image
+                )
+            )
+
+            if not is_valid:
+
+                error_content = (
+                    error_response.body
+                    if hasattr(
+                        error_response,
+                        "body",
+                    )
+                    else None
+                )
+
+                return error_response
+
+            image_bytes_list.append(
+                contents
+            )
+
+        # --------------------------------------------------------------------
+        # BATCH PREDICTION
+        # --------------------------------------------------------------------
 
         pipe = get_pipeline()
-        results = pipe.predict_batch(image_bytes_list, top_k=top_k)
-        return JSONResponse(content={"total_images": len(files), "results": results}, status_code=200)
+
+        results = pipe.predict_batch(
+            image_bytes_list,
+            top_k=top_k,
+        )
+
+        return JSONResponse(
+            content={
+                "total_images": len(files),
+                "results": results,
+            },
+            status_code=200,
+        )
+
+    except HTTPException:
+        raise
+
     except Exception as e:
-        logger.error(f"Batch prediction error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+
+        logger.error(
+            f"Batch prediction error: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
 
 
-@app.get("/api/classes", tags=["Encyclopedia"])
+# ============================================================================
+# CLASSES
+# ============================================================================
+
+@app.get(
+    "/api/classes",
+    tags=["Encyclopedia"],
+)
 async def get_all_classes():
     """
-    Returns list of all 86 supported plant disease categories with parsed metadata.
+    Return all 86 supported disease categories.
     """
-    classes_list = read_json(CLASS_NAMES_PATH)
-    formatted = [parse_class_metadata(cls) for cls in classes_list]
+
+    classes_list = read_json(
+        CLASS_NAMES_PATH
+    )
+
+    formatted = [
+        parse_class_metadata(cls)
+        for cls in classes_list
+    ]
+
     return {
         "count": len(formatted),
-        "classes": formatted
+        "classes": formatted,
     }
 
 
-@app.get("/api/class-info/{class_name}", tags=["Encyclopedia"])
-async def get_class_info(class_name: str):
-    """
-    Returns pathology, symptom breakdown, and treatment guidelines for a specific disease class.
-    """
-    info_db = read_json(DISEASE_INFO_PATH)
-    if class_name in info_db:
-        return info_db[class_name]
-    else:
-        raise HTTPException(status_code=404, detail=f"Class '{class_name}' not found.")
+# ============================================================================
+# CLASS INFORMATION
+# ============================================================================
 
+@app.get(
+    "/api/class-info/{class_name}",
+    tags=["Encyclopedia"],
+)
+async def get_class_info(
+    class_name: str,
+):
+    """
+    Return pathology, symptoms and treatment
+    information for a disease class.
+    """
+
+    info_db = read_json(
+        DISEASE_INFO_PATH
+    )
+
+    if class_name in info_db:
+
+        return info_db[class_name]
+
+    raise HTTPException(
+        status_code=404,
+        detail=(
+            f"Class '{class_name}' not found."
+        ),
+    )
+
+
+# ============================================================================
+# RUN DIRECTLY
+# ============================================================================
 
 if __name__ == "__main__":
+
     import uvicorn
-    logger.info("Launching server on http://0.0.0.0:8000")
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
+
+    logger.info(
+        "Launching server on "
+        "http://0.0.0.0:8000"
+    )
+
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+    )
