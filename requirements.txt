@@ -18,3 +18,4 @@ pytest>=8.0.0
 httpx>=0.26.0
 requests>=2.31.0
 gunicorn>=21.2.0
+opencv-python-headless
